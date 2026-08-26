@@ -87,6 +87,20 @@ def get_job(job_id: str) -> JobStatus:
     return job.to_status()
 
 
+@app.delete("/api/jobs/{job_id}", response_model=JobStatus)
+def cancel_job(job_id: str) -> JobStatus:
+    """Stop a run in flight.
+
+    Uploading again cancels the previous run on its own, so this is for the
+    case where the teacher backs out without starting another one — worth
+    having because an abandoned run keeps spending the daily quota.
+    """
+    job = jobs.cancel(job_id)
+    if job is None:
+        raise HTTPException(404, "That job has expired or never existed.")
+    return job.to_status()
+
+
 @app.get("/api/jobs/{job_id}/pages/{kind}/{index}.png")
 def get_page(job_id: str, kind: str, index: int) -> FileResponse:
     path = jobs.page_path(job_id, kind, index)

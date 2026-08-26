@@ -19,6 +19,7 @@ Stage = Literal[
     "grading",
     "done",
     "failed",
+    "cancelled",
 ]
 
 MatchMethod = Literal["label", "semantic", "sequential", "none"]
@@ -67,6 +68,11 @@ class Grade(BaseModel):
     max: float = 0.0
     verdict: Verdict = "ungraded"
     feedback: str = ""
+    # False when the marker judged that this answer does not address this
+    # question at all — which usually means the mapping is wrong rather than
+    # the student being wrong. Worth separating: a teacher should re-check the
+    # pairing, not the pupil.
+    addresses_question: bool = True
 
 
 class Answer(BaseModel):
@@ -116,7 +122,7 @@ class Result(BaseModel):
 
 class JobStatus(BaseModel):
     job_id: str
-    status: Literal["queued", "running", "done", "failed"]
+    status: Literal["queued", "running", "done", "failed", "cancelled"]
     stage: Stage
     progress: float = 0.0
     message: str = ""
