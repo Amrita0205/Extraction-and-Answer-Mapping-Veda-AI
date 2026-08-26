@@ -246,11 +246,19 @@ def box_to_fractions(box: Any) -> tuple[float, float, float, float] | None:
 
     Returns None for anything malformed rather than raising — one bad box on
     one page should not sink the whole run.
+
+    Length is checked as "at least four", not "exactly four", because the model
+    sometimes flattens the neighbouring fields into the array and returns
+    `[132, 118, 217, 858, false, false]` — the box, then the two continuation
+    booleans. Insisting on exactly four threw away a *correct* box: those
+    coordinates are within a percent of the true ink bounds. The caller then
+    fell back to a whole-page rectangle, so the highlight silently became the
+    entire sheet, which is the one failure mode a teacher notices immediately.
     """
-    if not isinstance(box, (list, tuple)) or len(box) != 4:
+    if not isinstance(box, (list, tuple)) or len(box) < 4:
         return None
     try:
-        ymin, xmin, ymax, xmax = (float(v) for v in box)
+        ymin, xmin, ymax, xmax = (float(v) for v in box[:4])
     except (TypeError, ValueError):
         return None
 

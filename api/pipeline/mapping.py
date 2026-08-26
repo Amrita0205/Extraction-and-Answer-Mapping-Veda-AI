@@ -62,11 +62,25 @@ def map_answers(
     taken: dict[str, AnswerBlock] = {}
 
     blocks = _merge_same_label(blocks)
+    numbers_on_paper = {q.number for q in questions}
+
+    # Blocks the student labelled with a question the paper does not contain.
+    # These are held back from the content and adjudication rungs below: the
+    # label is an instruction, and "Q14" on a paper that stops at 13 is the
+    # student telling us this answers nothing here. Letting word overlap
+    # reassign it is how an answer written for Q14 ends up marked as Q13 —
+    # which is exactly the "answers that match no question" case, silently got
+    # wrong. Only an explicit written label counts; a number parsed out of the
+    # opening words of a sentence is too easy to get wrong to pin on.
+    orphaned: set[str] = set()
 
     # --- 1 & 2: the student told us. -------------------------------------
     for block in blocks:
         number, part = labels.parse(block.label)
         method = "label"
+        if number is not None and number not in numbers_on_paper:
+            orphaned.add(block.id)
+            continue
         if number is None:
             number, part = labels.parse_leading(block.text)
             method = "label"
@@ -79,7 +93,10 @@ def map_answers(
         _assign(block, question, taken, method, 0.97)
 
     # --- 3: content similarity for whatever is left. ----------------------
-    free_blocks = [b for b in blocks if b.matched_question_id is None]
+    free_blocks = [
+        b for b in blocks
+        if b.matched_question_id is None and b.id not in orphaned
+    ]
     free_questions = [q for q in questions if q.id not in taken]
 
     if free_blocks and free_questions:
@@ -99,7 +116,10 @@ def map_answers(
             _assign(block, question, taken, "semantic", round(min(0.92, score), 3))
 
     # --- 4: ask the model about what is still floating. -------------------
-    free_blocks = [b for b in blocks if b.matched_question_id is None]
+    free_blocks = [
+        b for b in blocks
+        if b.matched_question_id is None and b.id not in orphaned
+    ]
     free_questions = [q for q in questions if q.id not in taken]
     if free_blocks and free_questions and len(free_blocks) <= ADJUDICATE_LIMIT:
         try:
@@ -108,7 +128,10 @@ def map_answers(
             log.warning("adjudication pass failed: %s", exc)
 
     # --- 5: an entirely unlabelled sheet answered in order. ---------------
-    free_blocks = [b for b in blocks if b.matched_question_id is None]
+    free_blocks = [
+        b for b in blocks
+        if b.matched_question_id is None and b.id not in orphaned
+    ]
     if free_blocks and not any(b.match_method == "label" for b in blocks):
         free_questions = [q for q in questions if q.id not in taken]
         if len(free_blocks) == len(free_questions) and free_questions:
@@ -127,6 +150,15 @@ def map_answers(
         warnings.append(
             f"{len(unmatched)} answer(s) did not correspond to any question on "
             f"the paper ({shown})."
+        )
+
+    named = [b.label for b in unmatched if b.id in orphaned and b.label]
+    if named:
+        warnings.append(
+            f"{len(named)} answer(s) are labelled with a question number the "
+            f"paper does not contain ({', '.join(named)}). They were left "
+            "unmatched rather than reassigned, because the label is the "
+            "student's own."
         )
     return questions, unmatched, warnings
 

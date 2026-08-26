@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw  # noqa: E402
 
-from pipeline import labels, mapping  # noqa: E402
+from pipeline import gemini, labels, mapping  # noqa: E402
 from pipeline.questions import _normalise  # noqa: E402
 from pipeline.schemas import AnswerBlock, Region  # noqa: E402
 from pipeline.tighten import tighten  # noqa: E402
@@ -239,6 +239,44 @@ def test_unlabelled_answer_matches_on_content():
     assert questions[1].answer is not None, "should have matched question 2 on content"
     assert questions[1].answer.match_method in ("semantic", "sequential")
     assert questions[0].status == "unanswered"
+
+
+
+def test_box_with_trailing_flags_is_still_a_box():
+    """The model sometimes flattens the continuation booleans into box_2d.
+
+    It returns `[ymin, xmin, ymax, xmax, false, false]`. Rejecting that for
+    being six long threw away a correct box, and the caller fell back to a
+    whole-page rectangle — so the highlight silently became the entire sheet.
+    """
+    four = gemini.box_to_fractions([132, 118, 217, 858])
+    six = gemini.box_to_fractions([132, 118, 217, 858, False, False])
+    assert six is not None, "a six-element box should still parse"
+    assert six == four, "the trailing flags must not change the box"
+
+    assert gemini.box_to_fractions([132, 118]) is None, "too short is still bad"
+
+
+def test_label_naming_a_question_not_on_the_paper_stays_unmatched():
+    """"Q14" on a paper that stops at 13 answers nothing here.
+
+    Content overlap used to reassign it — an answer about osmosis written for
+    Q14 landed on Q13, "Define osmosis", which reads as a confident correct
+    match and quietly loses the brief's "answers that match no question" case.
+    """
+    questions = [
+        _question("12", None, "Calculate the pulmonary ventilation rate."),
+        _question("13", None, "Define osmosis, and give one example in a plant cell."),
+    ]
+    blocks = [
+        _block("a1", "Q14.",
+               "Osmosis makes an animal cell swell and burst in pure water."),
+    ]
+    questions, unmatched, warnings = mapping.map_answers(questions, blocks)
+
+    assert [b.id for b in unmatched] == ["a1"], "Q14 should be left unmatched"
+    assert questions[1].status == "unanswered", "Q13 must not absorb it"
+    assert any("does not contain" in w for w in warnings), "should say why"
 
 
 def _run() -> int:
