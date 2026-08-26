@@ -139,19 +139,58 @@ def _inherit_numbers(blocks: list[AnswerBlock]) -> list[AnswerBlock]:
     before continuation merging, while blocks are still in reading order.
     """
     last_number: str | None = None
+    leading: list[AnswerBlock] = []  # bare sub-parts seen before any number
+
     for block in blocks:
         number, _ = labels.parse_leading(block.label)
         if number:
+            if last_number is None and leading:
+                _backfill(leading, number)
+                leading = []
             last_number = number
             continue
 
         part = labels.bare_part(block.label)
-        if part and last_number:
+        if not part:
+            continue
+
+        if last_number:
             block.label = f"{last_number} ({part})"
             # Worth recording: an inherited label is a weaker signal than one
             # the student actually wrote, and the mapper may want to say so.
             block.__dict__["_inherited_number"] = True
+        else:
+            leading.append(block)
+
     return blocks
+
+
+def _backfill(leading: list[AnswerBlock], first_number: str) -> None:
+    """Number a run of bare sub-parts that opened the booklet.
+
+    Whether the first answer arrives as "1. (i)" or just "(i)" is down to the
+    student's pen and the model's reading of it, and it decides whether seven
+    answers match or none do. When the first *numbered* label we meet is "2",
+    the group above it is question 1: booklets are answered from the front, and
+    a sub-part run that starts at (i) is the start of a question.
+
+    Only applied when the run really does start at (i) and the arithmetic lands
+    on a real question number, so a sheet that opens mid-question is left alone.
+    """
+    try:
+        previous = int(first_number) - 1
+    except ValueError:
+        return
+    if previous < 1:
+        return
+    if labels.bare_part(leading[0].label) not in ("i", "a", "1"):
+        return
+
+    for block in leading:
+        part = labels.bare_part(block.label)
+        if part:
+            block.label = f"{previous} ({part})"
+            block.__dict__["_inherited_number"] = True
 
 
 def _merge_continuations(blocks: list[AnswerBlock]) -> list[AnswerBlock]:

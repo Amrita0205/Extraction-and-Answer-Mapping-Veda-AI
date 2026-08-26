@@ -45,8 +45,31 @@ _LEADING = re.compile(
 )
 
 
+def _ascii_digits(text: str) -> str:
+    """`"१."` -> `"1."`.
+
+    A student sitting a Hindi paper may number their answers in Devanagari, and
+    NFKC leaves those code points alone — `unicodedata.normalize("NFKC", "१")`
+    is still `"१"`. The number then survives parsing as the string `"१"`, which
+    never compares equal to the `"1"` read off the printed paper, so the answer
+    is reported as unmatched and the question as unanswered. Every Unicode
+    decimal digit is folded here, which covers the other Indic scripts and
+    Arabic-Indic numerals too.
+    """
+    def fold(ch: str) -> str:
+        if ch.isascii():
+            return ch
+        # `decimal` with a default rather than `isdigit`: superscripts and the
+        # like satisfy isdigit but have no decimal value and would raise.
+        value = unicodedata.decimal(ch, None)
+        return str(value) if value is not None else ch
+
+    return "".join(fold(ch) for ch in text)
+
+
 def _clean(text: str) -> str:
     text = unicodedata.normalize("NFKC", text or "")
+    text = _ascii_digits(text)
     return text.replace("–", "-").replace("—", "-").strip()
 
 
