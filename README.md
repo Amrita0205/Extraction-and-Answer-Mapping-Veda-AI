@@ -249,15 +249,29 @@ Otherwise the Gemini rotation above is the working path.
 cd api
 pip install -r requirements.txt
 cp .env.example .env                 # then put your key in it
-uvicorn main:app --reload --port 8001
+
+# Auto-restarting (development):
+python -m watchfiles --target-type command \
+  "python -m uvicorn main:app --port 8001" pipeline main.py
+
+# Plain (no restart on edit):
+uvicorn main:app --port 8001
 ```
 
-`--reload` matters while developing: without it the server keeps serving the
-code it imported at startup, and an edit to `api/pipeline/` has no effect until
-it is restarted by hand. Configuration is read from `api/.env` at import time,
-so a change there is picked up by the same reload.
+Restart-on-edit matters here: without it the server keeps serving the code it
+imported at startup, so an edit to `api/pipeline/` has no effect and a real fix
+looks like it changed nothing.
 
-Port 8001 is what `web/.env.local` points at by default.
+**Use `watchfiles`, not `uvicorn --reload`.** On Windows the built-in reloader
+detects the change and logs `Reloading...`, but the restart never completes —
+the old worker keeps serving, and it can end up sharing the port with a
+newly-started one, so requests hit whichever answers first and behave
+inconsistently. `watchfiles` supervises the process from outside and replaces
+it in about two seconds, including while a job is mid-run. It ships with
+`uvicorn[standard]`, so it is already installed.
+
+Configuration is read from `api/.env` at import time, so a change there is
+picked up by the same restart. Port 8001 is what `web/.env.local` expects.
 
 ### Tests
 

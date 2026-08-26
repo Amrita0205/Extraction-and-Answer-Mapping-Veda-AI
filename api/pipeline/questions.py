@@ -15,6 +15,7 @@ to a page or three, so the extra vision calls are cheap.
 from __future__ import annotations
 
 import logging
+from typing import Callable
 
 from . import gemini, labels
 from .render import RenderedPage
@@ -44,10 +45,13 @@ Return JSON: {"questions": [{"number": string, "part": string|null,
 """
 
 
-def extract(pages: list[RenderedPage]) -> tuple[list[Question], list[str]]:
+def extract(
+    pages: list[RenderedPage],
+    check: Callable[[], None] | None = None,
+) -> tuple[list[Question], list[str]]:
     warnings: list[str] = []
 
-    raw = _from_pages(pages)
+    raw = _from_pages(pages, check)
     log.info("extracted %s question candidates", len(raw))
 
     questions = _normalise(raw, warnings)
@@ -69,7 +73,10 @@ only to confirm the wording of a question you can already see.
 """
 
 
-def _from_pages(pages: list[RenderedPage]) -> list[dict]:
+def _from_pages(
+    pages: list[RenderedPage],
+    check: Callable[[], None] | None = None,
+) -> list[dict]:
     """Read each page as an image, with its text layer alongside when it has one.
 
     Question papers run to a page or three, so paying for vision on all of them
@@ -79,6 +86,8 @@ def _from_pages(pages: list[RenderedPage]) -> list[dict]:
     """
     out: list[dict] = []
     for page in pages:
+        if check is not None:
+            check()
         text = (page.text_layer or "").strip()
         prompt = (
             "This image is page "

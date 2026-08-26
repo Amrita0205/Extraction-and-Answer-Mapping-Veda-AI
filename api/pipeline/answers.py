@@ -15,6 +15,7 @@ Q3 is roughly here" and unreliably good at the last few percent of an edge.
 from __future__ import annotations
 
 import logging
+from typing import Callable
 
 from . import gemini, labels
 from .render import RenderedPage
@@ -50,8 +51,11 @@ For each block report:
 - `continues_on_next_page`: true if the writing runs to the bottom edge and is
   clearly unfinished.
 
-Ignore the student's name, roll number, date, page numbers, and the school
-header. Those are not answers.
+Ignore anything that is not the student answering a question: their name, roll
+number, date, page numbers, the school header, and the subject title or paper
+code written at the top of the booklet ("Hindi Core (302)", "Physics 042").
+A subject title is not an answer even though it is handwritten and sits where
+an answer would.
 
 Return JSON: {{"blocks": [{{"label": string|null, "text": string,
 "box_2d": [number, number, number, number],
@@ -60,11 +64,16 @@ Return JSON: {{"blocks": [{{"label": string|null, "text": string,
 """
 
 
-def extract(pages: list[RenderedPage]) -> tuple[list[AnswerBlock], list[str]]:
+def extract(
+    pages: list[RenderedPage],
+    check: Callable[[], None] | None = None,
+) -> tuple[list[AnswerBlock], list[str]]:
     warnings: list[str] = []
     per_page: list[list[dict]] = []
 
     for page in pages:
+        if check is not None:
+            check()
         try:
             data = gemini.generate_json(
                 _PROMPT.format(index=page.index), images=[page.path]
