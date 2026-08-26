@@ -16,16 +16,14 @@ export const viewport: Viewport = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // suppressHydrationWarning is one level deep — it covers attributes on
+  // <html> itself and nothing inside it. Extensions and theme scripts add
+  // attributes to <html> before React hydrates, which React then reports as a
+  // mismatch; this silences that without hiding real mismatches in the app's
+  // own components.
   return (
-    <html lang="en">
-      {/*
-        suppressHydrationWarning is one level deep — it covers attributes on
-        <body> itself and nothing inside it. Browser extensions routinely add
-        attributes to <body> before React hydrates, which React then reports as
-        a mismatch; this silences that without hiding real mismatches in the
-        app's own components.
-      */}
-      <body suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body>
         {/*
           React hoists these into <head>. Declaring them here rather than in a
           literal <head> element avoids competing with the head Next injects.
