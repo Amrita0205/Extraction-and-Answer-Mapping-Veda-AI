@@ -175,7 +175,7 @@ every awkward case from the brief on three pages: Q3 answered above Q2, `11(a)`
 and `11(b)` as separate answers, `11(b)` running across a page break, nine
 questions left blank, and a `Q14` on a paper that stops at 13.
 
-Measured on that case (`eval/out/report.md`):
+Measured on that case (`eval/results/report.md`):
 
 | | |
 |---|---|
@@ -192,6 +192,33 @@ python eval/make_synthetic_case.py     # regenerate the sheet and its labels
 python eval/run_eval.py --case synthetic
 python eval/run_eval.py --rescore      # re-score the cache, no API calls
 ```
+
+### Breadth: all 14 subjects
+
+```bash
+python eval/run_dataset_sweep.py --max-answer-pages 2
+python eval/dashboard.py               # -> eval/results/dashboard.html
+```
+
+Every subject in `datasets/` runs, and **mean question-extraction coverage is
+90%** against each paper's own printed numbering — six subjects at 100%, none
+below 80%, no failures. That metric is measured on the question paper, which is
+read in full, so the page cap does not touch it.
+
+`--max-answer-pages` is not a tuning knob, it is the quota. Extraction costs one
+request per page and the free tier allows 20 per day per model, so reading all
+389 answer pages is ~420 requests — unbuyable in a day. The sweep records how
+many pages it read, and the dashboard withdraws the mapping-resolution figure
+entirely on a sampled run rather than printing a number that low beside a
+caveat nobody reads.
+
+### Where the outputs go
+
+| | |
+|---|---|
+| `eval/results/` | committed — `report.md`, `summary.json`, `dataset_sweep.json`, `dashboard.html` |
+| `eval/out/` | scratch — rendered pages and cached raw runs, gitignored |
+| `eval/cases/` | ground truth; `fixtures/` is regenerable and gitignored |
 
 **What this is and isn't.** It is a calibration case: rendered handwriting, so
 transcription is easier than a real scan, and a run that does not score near

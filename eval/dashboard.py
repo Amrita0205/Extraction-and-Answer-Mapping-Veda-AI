@@ -26,22 +26,33 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent / "out"
-SWEEP = OUT / "dataset_sweep.json"
-SUMMARY = OUT / "summary.json"
+# Two directories on purpose. `out/` is scratch — rendered page images and
+# cached raw runs, regenerable and large, so it is gitignored. `results/` is
+# what a person opens: the report, the numbers, the dashboard. Mixing them
+# meant the one file worth committing sat in a folder that was ignored.
+RESULTS = Path(__file__).resolve().parent / "results"
+SWEEP = RESULTS / "dataset_sweep.json"
+SUMMARY = RESULTS / "summary.json"
 
 STATUS = {"good": "#34ac15", "warn": "#e3600f", "bad": "#c0350a"}
+# Fixed order, never cycled. Checked with the palette validator rather than by
+# eye: magenta sits at ΔE 18.3 from the orange beside it for normal vision and
+# clears the CVD floor against blue, which a violet did not.
 METHOD_COLORS = {
     "label": "#2a78d6",
+    "inherited": "#c33d8a",
     "semantic": "#eb6834",
     "sequential": "#1baf7a",
     "none": "#eda100",
+    "other": "#8a8a86",
 }
 METHOD_LABEL = {
     "label": "Student's own label",
+    "inherited": "Sub-part, numbered from the answer above",
     "semantic": "Content match",
     "sequential": "Sequential fallback",
     "none": "Unresolved",
+    "other": "Other",
 }
 DISPLAY_NAME = {
     "phychology": "Psychology",
@@ -104,7 +115,18 @@ def hbar_chart(title: str, subtitle: str, rows: list) -> str:
 
 def method_mix_chart(agg_methods: dict) -> str:
     total = sum(agg_methods.values()) or 1
-    order = ["label", "semantic", "sequential", "none"]
+    order = ["label", "inherited", "semantic", "sequential", "none"]
+
+    # Anything the pipeline starts reporting that this chart has not been told
+    # about is folded into "Other", never dropped. It was dropped once: adding
+    # the "inherited" method left its share counted in the total but drawn
+    # nowhere, so the segments stopped summing to 100% and a whole category
+    # vanished from a chart that still looked complete.
+    unknown = sum(n for k, n in agg_methods.items() if k not in order)
+    if unknown:
+        agg_methods = dict(agg_methods)
+        agg_methods["other"] = agg_methods.get("other", 0) + unknown
+        order = order + ["other"]
     width = 640
     x = 0.0
     segs, legend = [], []
@@ -146,6 +168,18 @@ def build(sweep: dict, summary) -> str:
     mean_coverage = sum(coverages) / len(coverages) if coverages else None
     mean_resolution = sum(resolutions) / len(resolutions) if resolutions else None
 
+    # A sampled sweep cannot speak about mapping. Extraction reads one page per
+    # request against a quota of 20/day/model, so a full pass over 389 answer
+    # pages is unaffordable and --max-answer-pages exists to bound it. But every
+    # question whose answer sits on an unread page then counts as unanswered,
+    # which drags "resolution" toward zero for reasons that have nothing to do
+    # with the mapper. Presenting that as a headline accuracy figure would be a
+    # straightforwardly false claim, so when the run is sampled the figure is
+    # withdrawn rather than footnoted.
+    pages_read = sum(v.get("answer_pages_read") or 0 for v in ok.values())
+    pages_total = sum(v.get("answer_pages_total") or 0 for v in ok.values())
+    sampled = any(v.get("sampled") for v in ok.values())
+
     agg_methods: dict = {}
     for v in ok.values():
         for k, n in v["mapping"]["by_method"].items():
@@ -155,8 +189,12 @@ def build(sweep: dict, summary) -> str:
         ("Subjects run", f"{len(ok)}/{len(subjects)}", None),
         ("Questions extracted", str(total_q), None),
         ("Mean extraction coverage", pct(mean_coverage), status_color(mean_coverage)),
-        ("Mean mapping resolution", pct(mean_resolution), status_color(mean_resolution)),
     ]
+    if sampled:
+        tiles.append((f"Answer pages read (of {pages_total})", str(pages_read), None))
+    else:
+        tiles.append(("Mean mapping resolution", pct(mean_resolution),
+                      status_color(mean_resolution)))
     if summary:
         tiles.append(("Ground-truth extraction F1 (labelled sample)",
                        f"{summary['extraction_f1_median'] * 100:.0f}%",
@@ -177,7 +215,7 @@ def build(sweep: dict, summary) -> str:
         "not derived from our own output.",
         [(name_of(k), v["questions"]["coverage_vs_oracle"]) for k, v in ok.items()],
     )
-    resolution_chart = hbar_chart(
+    resolution_chart = "" if sampled else hbar_chart(
         "Mapping resolution rate",
         "Share of extracted questions that got matched to a written answer.",
         [(name_of(k), v["mapping"]["resolution_rate"]) for k, v in ok.items()],
@@ -201,6 +239,26 @@ def build(sweep: dict, summary) -> str:
         items = "".join(f"<li><strong>{esc(name_of(k))}</strong> — {esc(v['error'])}</li>"
                          for k, v in failed.items())
         failed_html = f'<div class="callout bad"><h3>Failed to run</h3><ul>{items}</ul></div>'
+
+    sampling_html = ""
+    if sampled:
+        sampling_html = f'''
+        <div class="callout warn">
+          <h3>This sweep sampled the answer sheets</h3>
+          <p>It read <strong>{pages_read} of {pages_total}</strong> answer pages — the first
+          two of each sheet. Extraction costs one request per page against a free-tier quota of
+          20 per day per model, so reading all 389 pages is about 420 requests and cannot be
+          bought in a day.</p>
+          <p><strong>What that does and does not affect.</strong> Question extraction coverage is
+          unaffected: it is measured on the question paper, which was read in full. Anything about
+          <em>answers</em> is not — a question whose answer sits on an unread page counts as
+          unanswered, so the per-subject "answered" and "unmatched" columns below describe the
+          sample, not the sheet. The mapping-resolution figure is withdrawn from this report
+          rather than shown with a caveat, because a number that low reads as a result no matter
+          what is printed beside it.</p>
+          <p>For mapping and highlight accuracy, use the ground-truth numbers above, which are
+          measured against a case whose answer positions are known exactly.</p>
+        </div>'''
 
     ground_truth_html = ""
     if not summary:
@@ -278,6 +336,7 @@ def build(sweep: dict, summary) -> str:
       itself, so read that one slice as a softer signal than the rest.</p>
     </div>
 
+    {sampling_html}
     {ground_truth_html}
     {failed_html}
 
@@ -306,8 +365,9 @@ def main() -> int:
         return 2
     sweep = json.loads(SWEEP.read_text())
     summary = json.loads(SUMMARY.read_text()) if SUMMARY.exists() else None
-    (OUT / "dashboard.html").write_text(build(sweep, summary))
-    print(f"written to {OUT / 'dashboard.html'}")
+    RESULTS.mkdir(exist_ok=True)
+    (RESULTS / "dashboard.html").write_text(build(sweep, summary), encoding="utf-8")
+    print(f"written to {RESULTS / 'dashboard.html'}")
     return 0
 
 

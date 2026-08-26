@@ -56,7 +56,12 @@ from pipeline import mapping, render  # noqa: E402
 from pipeline import questions as questions_mod  # noqa: E402
 
 DATASETS = ROOT / "datasets"
+# Two directories on purpose. `out/` is scratch — rendered page images and
+# cached raw runs, regenerable and large, so it is gitignored. `results/` is
+# what a person opens: the report, the numbers, the dashboard. Mixing them
+# meant the one file worth committing sat in a folder that was ignored.
 OUT = Path(__file__).resolve().parent / "out"
+RESULTS = Path(__file__).resolve().parent / "results"
 
 # Matches "Q.21", "Q 21", "Q21" and the Hindi "प्रश्न1." marker used in the
 # Hindi Core paper. Deliberately simple: this is a cross-check, not a parser.
@@ -87,7 +92,8 @@ def region_sanity(regions: list) -> dict:
     }
 
 
-def run_subject(name: str, subject_dir: Path, do_grade: bool) -> dict:
+def run_subject(name: str, subject_dir: Path, do_grade: bool,
+                max_answer_pages: int = 0) -> dict:
     q_files = list(subject_dir.glob("*Question_Paper.pdf"))
     a_files = list(subject_dir.glob("*Answer_Sheet.pdf"))
     if not q_files or not a_files:
@@ -100,6 +106,17 @@ def run_subject(name: str, subject_dir: Path, do_grade: bool) -> dict:
         pages_dir = OUT / f"{name}-pages"
         q_pages = render.render(q_path, pages_dir, "q")
         a_pages = render.render(a_path, pages_dir, "a")
+
+        # Extraction costs one request per page, against a free-tier quota of
+        # 20 per day per model. The 14 subjects here run to 389 answer pages,
+        # so a full sweep is ~420 requests and simply cannot be bought in a
+        # day. Capping the answer pages keeps every subject in the sweep —
+        # breadth is the point — at a cost that fits. How many pages were
+        # actually read is recorded, so nothing downstream can quietly read a
+        # sampled run as a complete one.
+        a_pages_total = len(a_pages)
+        if max_answer_pages:
+            a_pages = a_pages[:max_answer_pages]
 
         questions, w1 = questions_mod.extract(q_pages)
         blocks, w2 = answers_mod.extract(a_pages)
@@ -144,6 +161,9 @@ def run_subject(name: str, subject_dir: Path, do_grade: bool) -> dict:
     return {
         "question_paper": q_path.name,
         "answer_sheet": a_path.name,
+        "answer_pages_read": len(a_pages),
+        "answer_pages_total": a_pages_total,
+        "sampled": len(a_pages) < a_pages_total,
         "elapsed_s": round(time.monotonic() - started, 1),
         "questions": {
             "extracted": total,
@@ -171,6 +191,11 @@ def run_subject(name: str, subject_dir: Path, do_grade: bool) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--subject", help="run only this subject folder")
+    ap.add_argument("--max-answer-pages", type=int, default=0, metavar="N",
+                    help="read only the first N pages of each answer sheet "
+                         "(0 = all). One request per page, so this is the "
+                         "dial that decides whether a sweep fits in the "
+                         "free-tier daily quota.")
     ap.add_argument("--grade", action="store_true",
                      help="also run grading (extra API calls; no ground-truth "
                           "marks exist for this data, so treat verdicts as a "
@@ -192,7 +217,8 @@ def main() -> int:
     results: dict[str, dict] = {}
     for subject_dir in subjects:
         print(f"  {subject_dir.name}: running ({gemini.PROVIDER})...")
-        r = run_subject(subject_dir.name, subject_dir, args.grade)
+        r = run_subject(subject_dir.name, subject_dir, args.grade,
+                        args.max_answer_pages)
         results[subject_dir.name] = r
         if "error" in r:
             print(f"    failed: {r['error']}")
@@ -208,7 +234,8 @@ def main() -> int:
         "model": gemini.MODEL if gemini.PROVIDER == "gemini" else gemini.OLLAMA_MODEL,
         "subjects": results,
     }
-    out_path = OUT / "dataset_sweep.json"
+    RESULTS.mkdir(exist_ok=True)
+    out_path = RESULTS / "dataset_sweep.json"
     out_path.write_text(json.dumps(payload, indent=2))
     print(f"\nwritten to {out_path}")
     print("Next: python eval/dashboard.py   to build the HTML report")

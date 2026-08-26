@@ -1,0 +1,14 @@
+{
+  "cases": 1,
+  "extraction_f1_median": 1.0,
+  "mapped_rate": 1.0,
+  "mapped_hits": 6,
+  "mapped_total": 6,
+  "blanks_rate": 1.0,
+  "blanks_hits": 9,
+  "blanks_total": 9,
+  "page_ok_rate": 1.0,
+  "page_ok_hits": 6,
+  "page_ok_total": 6,
+  "highlight_iou_median": 0.8895694133148232
+}

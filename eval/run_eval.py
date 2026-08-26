@@ -33,7 +33,12 @@ from pipeline import mapping, render  # noqa: E402
 from pipeline import questions as questions_mod  # noqa: E402
 
 CASES = Path(__file__).resolve().parent / "cases"
+# Two directories on purpose. `out/` is scratch — rendered page images and
+# cached raw runs, regenerable and large, so it is gitignored. `results/` is
+# what a person opens: the report, the numbers, the dashboard. Mixing them
+# meant the one file worth committing sat in a folder that was ignored.
 OUT = Path(__file__).resolve().parent / "out"
+RESULTS = Path(__file__).resolve().parent / "results"
 
 
 def label_of(question) -> str:
@@ -263,7 +268,8 @@ def main() -> int:
     ] + lines[2:]
 
     text = "\n".join(lines)
-    (OUT / "report.md").write_text(text)
+    RESULTS.mkdir(exist_ok=True)
+    (RESULTS / "report.md").write_text(text, encoding="utf-8")
 
     # Machine-readable twin of the aggregate block, so other tooling (the
     # dataset-sweep dashboard) can read real numbers instead of scraping
@@ -282,11 +288,11 @@ def main() -> int:
         "page_ok_total": agg["page"].total,
         "highlight_iou_median": M.median(agg["iou"]),
     }
-    (OUT / "summary.json").write_text(json.dumps(summary, indent=2))
+    (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     print()
     print(text)
-    print(f"\nwritten to {OUT / 'report.md'} and {OUT / 'summary.json'}")
+    print(f"\nwritten to {RESULTS / 'report.md'} and {RESULTS / 'summary.json'}")
     return 0
 
 

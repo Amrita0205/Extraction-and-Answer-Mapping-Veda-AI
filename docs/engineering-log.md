@@ -279,7 +279,7 @@ validated against real marks.
 ## Building the accuracy harness, and what it immediately found
 
 Three of the six evaluation criteria are accuracy claims. None had a number,
-and `eval/out/report.md` had been committed reading `mean F1 0.00 over 0
+and `eval/results/report.md` had been committed reading `mean F1 0.00 over 0
 sheet(s)` — because the harness had never actually run. Its first line crashed:
 `dataclasses.asdict` called on a pydantic model.
 

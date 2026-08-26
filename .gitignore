@@ -17,8 +17,9 @@ spike/out/
 
 *.tsbuildinfo
 
-# Eval fixtures are large and not ours to redistribute; cached runs are
-# reproducible. The report itself is worth keeping.
+# Eval fixtures are large and regenerable (eval/make_synthetic_case.py), and
+# eval/out/ is scratch: rendered page images and cached raw runs. eval/results/
+# is the opposite - small, and the whole point of running the thing - so it is
+# committed in full.
 eval/cases/fixtures/
-eval/out/*
-!eval/out/report.md
+eval/out/
