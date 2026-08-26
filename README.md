@@ -12,7 +12,7 @@ marks the work.
 |---|---|
 | Frontend | Next.js 15 (App Router), TypeScript, Tailwind v4 |
 | Backend | FastAPI (Python 3.12) |
-| AI model | Google **Gemini 2.5 Flash** (free tier) |
+| AI model | Google **Gemini 3.1 Flash Lite** (free tier), with a fallback rotation |
 | Storage | In memory, per job — no database |
 
 ---
@@ -37,10 +37,23 @@ pulled out, because the next stage uses it when it exists.
 
 ### 2. Question extraction (`questions.py`)
 
-A printed question paper usually arrives as a PDF with a real text layer. When
-it does, the text is what gets sent to the model rather than the page image —
-OCR error is the dominant source of extraction mistakes and a text layer has
-none of it. Scans and photographs fall back to vision, one page per request.
+A printed question paper usually arrives as a PDF with a real text layer, and
+that layer is the best available source for the *wording* of a question — it
+carries no OCR error at all. It is a poor source for the paper's *structure*.
+PDF text extraction routinely drops the spaces between words and renders
+sub-part markers like `(i)` as a replacement glyph, and on the Hindi Core
+sample that is exactly what happens: `िदए गए गद्यांश` comes back as
+`िदएगएगद्यांश`, and every `(i)`/`(ii)`/`(iii)` arrives as `(￿)`.
+
+Losing those markers is expensive, because they are the thing answers are
+matched on. Reading that paper from its text layer produced eleven questions
+with `number: null` and `part: null`, and two of eleven answers matched.
+
+So each page goes to the model as an image *and* as its text layer, with the
+model told to read numbering, sub-parts and marks off the image and to use the
+text only to confirm wording. Papers run to a page or three, so the extra
+vision calls are cheap. The same sample then produced questions 1–7 with their
+sub-parts intact.
 
 Sub-parts are split at this stage: `11 (a)` and `11 (b)` become two entries,
 each carrying `number: "11"` and `part: "a" | "b"` as separate fields. Keeping
@@ -172,14 +185,79 @@ Point it at the real API with `web/.env.local`:
 NEXT_PUBLIC_API_BASE=https://your-api.onrender.com
 ```
 
+### Choosing a model
+
+Model choice is not a detail here — it is the difference between a run that
+finishes and one that does not. Measured on a rendered A4 page from this
+dataset, asking for the same JSON:
+
+| model | latency | note |
+|---|---|---|
+| `gemini-3.1-flash-lite` | **2.2s** | with `thinking_budget=0`; the default |
+| `gemini-3.5-flash-lite` | **2.5s** | first fallback |
+| `gemini-3.1-flash-lite` | 176s | *without* the thinking budget applied |
+| `gemini-flash-lite-latest` | 171s | resolves to a thinking model **and** rejects `thinking_budget`, so it cannot be made fast — deliberately not in the rotation |
+| `gemini-3.6-flash` | 190s | |
+
+Two things follow from that table. Extraction is a perception task, so
+`thinking_budget=0` is set on every extraction call and thinking is turned back
+on only for grading. And a model name that looks like the fast one is not
+necessarily fast — `flash-lite-latest` is seventy times slower than
+`3.1-flash-lite` on the same page.
+
+### Free-tier quota, and the model rotation
+
+The free tier grants **20 requests per day, per model**. Extraction costs one
+request per page, so a single 18-page answer sheet very nearly exhausts one
+model's entire daily allowance — and a second run that day will fail outright.
+
+Calls therefore walk a rotation of models, each of which has its own quota
+bucket. A `RESOURCE_EXHAUSTED` or `UNAVAILABLE` response moves straight to the
+next model rather than backing off, because waiting cannot return a daily quota.
+Set the list with `GEMINI_MODELS`; it defaults to four models, giving roughly
+80 requests a day.
+
+### Local Ollama mode
+
+`AI_PROVIDER=ollama` runs the same pipeline against a local vision model, which
+has no quota at all and keeps page images on the machine:
+
+```bash
+ollama pull gemma3:12b
+```
+
+```text
+AI_PROVIDER=ollama
+OLLAMA_MODEL=gemma3:12b
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+**This needs a GPU.** It was measured on a 16GB CPU-only machine and is not
+usable there: `gemma3:12b` read a *small crop* of one page, emitting 24 tokens,
+in **394 seconds** (`size_vram: 0` — the whole model runs on CPU). It reads the
+handwriting correctly, so this is a throughput problem rather than a quality
+one, but a full page with a JSON reply extrapolates to roughly twenty minutes,
+and an 18-page sheet to about six hours. `gemma3:4b` is around three times
+faster, which is still hours per sheet.
+
+Use this mode when there is a GPU or when data cannot leave the machine.
+Otherwise the Gemini rotation above is the working path.
+
 ### Backend
 
 ```bash
 cd api
 pip install -r requirements.txt
-export GEMINI_API_KEY=...            # https://aistudio.google.com/apikey
-uvicorn main:app --reload --port 8000
+cp .env.example .env                 # then put your key in it
+uvicorn main:app --reload --port 8001
 ```
+
+`--reload` matters while developing: without it the server keeps serving the
+code it imported at startup, and an edit to `api/pipeline/` has no effect until
+it is restarted by hand. Configuration is read from `api/.env` at import time,
+so a change there is picked up by the same reload.
+
+Port 8001 is what `web/.env.local` points at by default.
 
 ### Tests
 
@@ -227,9 +305,28 @@ Render URL. Set `ALLOWED_ORIGINS` on the API to the Vercel URL once it exists.
   rather than stored.
 - **10MB per upload**, matching the `Max 10MB` caption in the design. Large
   scans should be compressed first.
-- **Free-tier rate limits** are real. Extraction is one request per page, so a
-  ten-page sheet is ten requests plus grading; a burst can hit the per-minute
-  limit and the retry backoff will slow the run rather than fail it.
+- **Free-tier quota is the binding constraint**, not rate limiting. The limit is
+  20 requests per day *per model*, and extraction is one request per page, so a
+  single 18-page sheet is ~19 requests — nearly a model's whole day. The
+  rotation across four models raises the ceiling to roughly 80 requests a day,
+  which is a handful of sheets, not a classroom. Marking a real class needs a
+  paid key; nothing in the code changes for that beyond the quota.
+- **Runtime is dominated by the model, not the pipeline.** An 18-page sheet
+  takes ~258s end to end, of which answer extraction is ~64s (~3.5s per page)
+  and grading is ~180s. The local work — rendering, tightening, mapping — is
+  under a second in total.
+- **The bundled dataset's papers are reconstructed, and do not fully match
+  their booklets.** Every PDF in `datasets/` states on its first page that it
+  was *reconstructed from the submitted answer booklet* — only the booklets
+  were available, so a model inferred the questions from the visible working.
+  They are excellent handwriting samples, but they are weak ground truth for
+  mapping: the Hindi Core booklet answers questions 1–12 while its
+  reconstructed paper contains only 1–7, and the content does not correspond
+  either (answer `1.(i)` is an MCQ option, question `1(i)` asks for an
+  explanation). Most of the unmatched answers on that sample are therefore
+  correct behaviour rather than mapping error, and no accuracy number taken
+  from this dataset should be quoted without that caveat. See
+  [`docs/engineering-log.md`](docs/engineering-log.md).
 - **Handwriting quality bounds everything.** Transcription drives both matching
   and marking, so a sheet that a human would struggle to read will map poorly.
   Confidence and the matching method are shown per answer so a teacher can see
