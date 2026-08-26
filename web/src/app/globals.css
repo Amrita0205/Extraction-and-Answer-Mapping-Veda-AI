@@ -46,10 +46,24 @@ body {
   height: 100%;
 }
 
+/*
+ * Page background: the design's gradient and two blurred blobs, with a fine
+ * grain laid over them.
+ *
+ * All four are background layers on one element so background-blend-mode can
+ * apply. The grain blends with `soft-light`, which leaves a mid-grey source
+ * essentially neutral — it adds texture without shifting the palette. Painted
+ * as a plain layer instead, it darkened the page by about five levels.
+ *
+ * The grain is feTurbulence in a data URI rather than a shipped image: no
+ * request, tiles seamlessly (stitchTiles) and stays crisp at any device pixel
+ * ratio. Drop the first layer from each list below to go back to flat.
+ */
 body {
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background:
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E"),
     radial-gradient(
       52rem 30rem at 12% 96%,
       rgb(255 141 54 / 0.16),
@@ -61,6 +75,9 @@ body {
       transparent 62%
     ),
     linear-gradient(150deg, var(--color-page-from), var(--color-page-to));
+  background-size: 160px 160px, auto, auto, auto;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-blend-mode: soft-light, normal, normal, normal;
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
