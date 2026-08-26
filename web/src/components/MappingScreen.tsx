@@ -99,7 +99,14 @@ export function MappingScreen({
 
       {/* Below lg one panel shows at a time behind the tabs; from lg they sit
           side by side at full height and scroll independently. */}
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
+      {/*
+        The floor matters on a short laptop. Without it these two panes just
+        take whatever height is left, so at 900px tall — minus browser chrome,
+        the top bar, the summary strip and the tabs — each pane is a couple of
+        question cards deep and the screen reads as broken. Below the floor the
+        page scrolls instead of the panes shrinking further.
+      */}
+      <div className="grid min-h-[480px] flex-1 gap-3 lg:grid-cols-2">
         {/* Left — the extracted questions, in printed order. */}
         <div
           className={[

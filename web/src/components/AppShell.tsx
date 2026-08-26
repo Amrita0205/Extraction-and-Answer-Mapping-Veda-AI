@@ -84,6 +84,8 @@ export function AppShell({
     setDrawer(false);
   };
 
+  const mainRef = useRef<HTMLElement>(null);
+
   return (
     <div className="flex h-dvh gap-0 overflow-hidden p-2 sm:p-3">
       <Sidebar
@@ -112,21 +114,98 @@ export function AppShell({
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* `relative` anchors the scroll button, which sits over <main>. */}
+      <div className="relative flex min-w-0 flex-1 flex-col">
         <TopBar
           onMenu={() => setDrawer(true)}
           onHome={() => go("exams")}
           section={section}
         />
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto md:overflow-hidden">
+        {/*
+          Scrolls at every width. It used to be `md:overflow-hidden`, on the
+          assumption that a desktop is tall enough to show a screen whole —
+          which a 1920x900 laptop is not. Anything below the fold was then
+          simply unreachable, with no scrollbar to suggest otherwise.
+        */}
+        <main ref={mainRef} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
           {section === "exams" ? (
             children
           ) : (
             <OutOfScope section={section} onBack={() => go("exams")} />
           )}
         </main>
+        <ScrollDownButton target={mainRef} />
       </div>
     </div>
+  );
+}
+
+/**
+ * A "there is more below" affordance for a scroll container.
+ *
+ * A thin scrollbar is easy to miss on a short laptop screen, and the screens
+ * here end in a card that crops cleanly at the fold — so a cut-off page reads
+ * as a finished one rather than as something to scroll. This shows only while
+ * the container actually has somewhere to go, and takes itself away at the
+ * bottom, so it never sits over content it isn't needed for.
+ */
+function ScrollDownButton({
+  target,
+}: {
+  target: React.RefObject<HTMLElement | null>;
+}) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const node = target.current;
+    if (!node) return;
+
+    const update = () => {
+      const remaining = node.scrollHeight - node.scrollTop - node.clientHeight;
+      // A couple of pixels of slack: sub-pixel layout leaves a sliver of
+      // "scrollable" behind at the true bottom, which would keep the button up.
+      setShow(remaining > 24);
+    };
+
+    update();
+    node.addEventListener("scroll", update, { passive: true });
+
+    // The content grows and shrinks under it — a job finishing swaps a
+    // one-screen loader for a long list — so watch the box, not just scrolling.
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    for (const child of Array.from(node.children)) observer.observe(child);
+
+    return () => {
+      node.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [target]);
+
+  if (!show) return null;
+
+  return (
+    <button
+      type="button"
+      aria-label="Scroll down"
+      onClick={() =>
+        target.current?.scrollBy({
+          top: target.current.clientHeight * 0.8,
+          behavior: "smooth",
+        })
+      }
+      className="animate-rise absolute bottom-5 left-1/2 z-20 grid h-10 w-10 -translate-x-1/2 place-items-center rounded-full border border-hairline bg-white/90 text-ink-soft shadow-[0_4px_16px_rgba(0,0,0,0.14)] backdrop-blur transition hover:bg-white hover:text-ink"
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+        <path
+          d="M6 9.5 12 15.5 18 9.5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
   );
 }
 
@@ -284,7 +363,11 @@ function TopBar({
   const label = NAV.find((n) => n.key === section)?.label ?? "Exams";
 
   return (
-    <header className="relative mx-0 mb-2.5 flex h-14 shrink-0 items-center gap-1 rounded-[16px] bg-white/60 px-2 backdrop-blur-xl sm:mx-3 sm:px-3">
+    // z-30 is load-bearing, not decoration. `backdrop-blur-xl` makes this
+    // header its own stacking context, so the popovers below are stacked
+    // *within* it — and <main> is a later sibling, so without a z-index here
+    // the page content paints straight over an open popover.
+    <header className="relative z-30 mx-0 mb-2.5 flex h-14 shrink-0 items-center gap-1 rounded-[16px] bg-white/60 px-2 backdrop-blur-xl sm:mx-3 sm:px-3">
       <button
         type="button"
         aria-label="Open menu"
