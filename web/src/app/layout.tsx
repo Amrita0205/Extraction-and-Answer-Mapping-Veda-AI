@@ -18,8 +18,18 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <head>
+      {/*
+        suppressHydrationWarning is one level deep — it covers attributes on
+        <body> itself and nothing inside it. Browser extensions routinely add
+        attributes to <body> before React hydrates, which React then reports as
+        a mismatch; this silences that without hiding real mismatches in the
+        app's own components.
+      */}
+      <body suppressHydrationWarning>
         {/*
+          React hoists these into <head>. Declaring them here rather than in a
+          literal <head> element avoids competing with the head Next injects.
+
           Loaded by <link> rather than next/font so the production build never
           depends on reaching Google Fonts at compile time — a build that fails
           on a CI network hiccup the night before a deadline is not worth the
@@ -32,11 +42,12 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap"
           rel="stylesheet"
+          precedence="default"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap"
         />
-      </head>
-      <body>{children}</body>
+        {children}
+      </body>
     </html>
   );
 }
