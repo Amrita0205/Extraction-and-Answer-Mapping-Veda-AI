@@ -1,0 +1,26 @@
+{
+  "name": "example",
+  "_comment": "Template. Copy this, point it at your files, and edit the labels. Paths are relative to this file.",
+  "question_paper": "../../spike/out/question_paper.pdf",
+  "answer_sheet": "fixtures/sheet-1.pdf",
+
+  "questions": [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+    "11(a)", "11(b)", "12(i)", "12(ii)", "13"
+  ],
+
+  "expected": {
+    "1":     {"page": 0, "y": [0.10, 0.24], "contains": "artery"},
+    "3":     {"page": 0, "y": [0.28, 0.46], "contains": "chloroplast"},
+    "2":     {"page": 0, "y": [0.50, 0.62], "contains": "chloroplast"},
+    "4":     null,
+    "5":     {"page": 0, "y": [0.66, 0.88], "contains": "alveolar"},
+    "7":     null,
+    "9":     null,
+    "11(a)": {"page": 1, "y": [0.08, 0.26], "contains": "light"},
+    "11(b)": {"page": 1, "y": [0.30, 0.94], "contains": "sunlight"},
+    "12(i)": {"page": 2, "y": [0.10, 0.30], "contains": "6"}
+  },
+
+  "unmatched": ["Q15"]
+}

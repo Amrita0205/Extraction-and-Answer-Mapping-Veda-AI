@@ -1,6 +1,6 @@
 node_modules/
 .next/
-out/
+/web/out/
 dist/
 build/
 
@@ -16,3 +16,9 @@ spike/out/
 *.log
 
 *.tsbuildinfo
+
+# Eval fixtures are large and not ours to redistribute; cached runs are
+# reproducible. The report itself is worth keeping.
+eval/cases/fixtures/
+eval/out/*
+!eval/out/report.md
