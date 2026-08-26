@@ -65,6 +65,22 @@ def grade(questions: list[Question]) -> tuple[bool, str, list[str]]:
         )
         return False, "", warnings
 
+    # An answer that does not address its question is usually a mapping
+    # failure wearing a mark of zero. Surfacing it separately tells the teacher
+    # to re-check the pairing rather than the pupil — and on a paper whose
+    # numbering does not line up with the booklet, this is most of the story.
+    mismatched = [
+        labels.display(q.number, q.part)
+        for q in answered
+        if q.grade is not None and not q.grade.addresses_question
+    ]
+    if mismatched:
+        warnings.append(
+            f"{len(mismatched)} answer(s) were matched to a question they do "
+            f"not appear to address ({', '.join(mismatched)}). The pairing is "
+            "worth checking before the mark is."
+        )
+
     overall = ""
     try:
         overall = _overall(answered)
@@ -90,6 +106,14 @@ def _grade_batch(batch: list[Question]) -> None:
         "`max_marks` and write one or two sentences of feedback addressed to "
         "the student.\n"
         "Guidance:\n"
+        "- These pairings were made automatically, usually from the number the "
+        "  student wrote beside their answer, so a pairing CAN be wrong. Judge "
+        "  the answer against the question as printed. If the answer plainly "
+        "  does not address that question — it answers something else, or it "
+        "  is a multiple-choice option for a question that asks for an "
+        "  explanation — award 0, set `addresses_question` false, and say so "
+        "  plainly. Do NOT reinterpret the question to fit the answer, and do "
+        "  not praise an answer for something the question did not ask.\n"
         "- The answer is a transcription of handwriting, so ignore spelling "
         "  and transcription noise. Mark the understanding, not the neatness.\n"
         "- Award partial marks where part of the answer is right.\n"
@@ -98,7 +122,8 @@ def _grade_batch(batch: list[Question]) -> None:
         "- Feedback should say what earned the marks and what was missing. Be "
         "  specific and kind; never sarcastic.\n"
         'Return JSON: {"grades": [{"id": string, "awarded": number, '
-        '"verdict": "correct"|"partial"|"incorrect", "feedback": string}]}\n\n'
+        '"verdict": "correct"|"partial"|"incorrect", '
+        '"addresses_question": boolean, "feedback": string}]}\n\n'
         + json.dumps(payload, ensure_ascii=False)
     )
     # Marking benefits from a little deliberation, unlike extraction.
@@ -131,6 +156,7 @@ def _grade_batch(batch: list[Question]) -> None:
             max=maximum,
             verdict=verdict,
             feedback=str(item.get("feedback") or "").strip(),
+            addresses_question=bool(item.get("addresses_question", True)),
         )
 
     for question in batch:
