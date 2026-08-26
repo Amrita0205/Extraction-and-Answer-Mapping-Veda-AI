@@ -228,8 +228,8 @@ function Sidebar({
   return (
     <aside
       className={[
-        "shrink-0 flex-col rounded-[20px] bg-white/85 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-[width] duration-200",
-        collapsed ? "w-16 items-center px-2" : "w-[188px] px-3",
+        "shrink-0 flex-col rounded-panel bg-white/85 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-[width] duration-200",
+        collapsed ? "w-16 items-center px-2" : "w-47 px-3",
         className,
       ].join(" ")}
     >
@@ -370,7 +370,7 @@ function TopBar({
     // header its own stacking context, so the popovers below are stacked
     // *within* it — and <main> is a later sibling, so without a z-index here
     // the page content paints straight over an open popover.
-    <header className="relative z-30 mx-0 mb-2.5 flex h-14 shrink-0 items-center gap-1 rounded-[16px] bg-white/60 px-2 backdrop-blur-xl sm:mx-3 sm:px-3">
+    <header className="relative z-30 mx-0 mb-2.5 flex h-14 shrink-0 items-center gap-1 rounded-2xl bg-white/60 px-2 backdrop-blur-xl sm:mx-3 sm:px-3">
       <button
         type="button"
         aria-label="Open menu"
@@ -456,11 +456,11 @@ function Popover({
   onClose: () => void;
 }) {
   return (
-    <div className="animate-rise absolute right-0 top-[52px] z-40 w-[286px] rounded-[14px] border border-hairline bg-white p-3.5 shadow-[0_8px_28px_rgba(0,0,0,0.12)]">
+    <div className="animate-rise absolute right-0 top-13 z-40 w-71.5 rounded-card border border-hairline bg-white p-3.5 shadow-[0_8px_28px_rgba(0,0,0,0.12)]">
       {kind === "help" && (
         <>
           <p className="mb-1.5 text-[12.5px] font-bold">How this works</p>
-          <ol className="list-decimal space-y-1 pl-4 text-[12px] leading-[1.5] text-ink-soft">
+          <ol className="list-decimal space-y-1 pl-4 text-[12px] leading-normal text-ink-soft">
             <li>Upload the question paper and one answer sheet.</li>
             <li>Questions and answers are extracted and matched.</li>
             <li>
@@ -473,7 +473,7 @@ function Popover({
       {kind === "bell" && (
         <>
           <p className="mb-1.5 text-[12.5px] font-bold">Notifications</p>
-          <p className="text-[12px] leading-[1.5] text-ink-soft">
+          <p className="text-[12px] leading-normal text-ink-soft">
             Nothing new. Evaluation runs happen in the browser and finish while
             you watch, so there is nothing to notify you about yet.
           </p>
@@ -499,7 +499,7 @@ function Popover({
               </span>
             </span>
           </div>
-          <p className="text-[11.5px] leading-[1.5] text-ink-soft">
+          <p className="text-[11.5px] leading-normal text-ink-soft">
             Signed in as a demo teacher. The brief specifies no authentication,
             so there is no real account behind this.
           </p>
@@ -539,7 +539,7 @@ function OutOfScope({
 
   return (
     <section className="flex flex-1 items-center justify-center px-4 pb-8">
-      <div className="w-full max-w-[420px] rounded-[20px] bg-white/60 px-6 py-9 text-center backdrop-blur-xl">
+      <div className="w-full max-w-105 rounded-panel bg-white/60 px-6 py-9 text-center backdrop-blur-xl">
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-chip text-ink-soft">
           <Icon width={22} height={22} />
         </span>

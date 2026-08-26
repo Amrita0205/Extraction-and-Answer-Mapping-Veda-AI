@@ -106,11 +106,11 @@ export function MappingScreen({
         question cards deep and the screen reads as broken. Below the floor the
         page scrolls instead of the panes shrinking further.
       */}
-      <div className="grid min-h-[480px] flex-1 gap-3 lg:grid-cols-2">
+      <div className="grid min-h-120 flex-1 gap-3 lg:grid-cols-2">
         {/* Left — the extracted questions, in printed order. */}
         <div
           className={[
-            "min-h-0 flex-col rounded-[20px] bg-white/50 p-3 backdrop-blur-xl lg:flex",
+            "min-h-0 flex-col rounded-panel bg-white/50 p-3 backdrop-blur-xl lg:flex",
             tab === "questions" ? "flex" : "hidden",
           ].join(" ")}
         >
@@ -216,7 +216,7 @@ function SummaryStrip({
   onReset: () => void;
 }) {
   return (
-    <div className="shrink-0 rounded-[16px] bg-white/55 px-3.5 py-2.5 backdrop-blur-xl">
+    <div className="shrink-0 rounded-2xl bg-white/55 px-3.5 py-2.5 backdrop-blur-xl">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <Stat label="Questions" value={summary.total_questions} />
         <Stat label="Answered" value={summary.answered} tone="good" />
@@ -238,7 +238,7 @@ function SummaryStrip({
       </div>
 
       {summary.overall_feedback && (
-        <p className="mt-2 border-t border-black/5 pt-2 text-[11.5px] leading-[1.5] text-ink-soft">
+        <p className="mt-2 border-t border-black/5 pt-2 text-[11.5px] leading-normal text-ink-soft">
           <span className="font-semibold text-ink">Overall — </span>
           {summary.overall_feedback}
         </p>

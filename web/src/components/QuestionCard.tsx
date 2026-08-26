@@ -53,7 +53,7 @@ export function QuestionCard({
     <article
       onClick={onSelect}
       className={[
-        "cursor-pointer rounded-[14px] bg-white transition",
+        "cursor-pointer rounded-card bg-white transition",
         selected
           ? "border-2 border-brand-soft shadow-[0_2px_10px_rgba(255,86,35,0.08)]"
           : "border border-transparent hover:border-hairline",
@@ -122,7 +122,7 @@ export function QuestionCard({
                 <p className="mb-1 text-[11px] font-bold">
                   Student&apos;s answer
                 </p>
-                <p className="text-[12px] leading-[1.5] text-ink-soft">
+                <p className="text-[12px] leading-normal text-ink-soft">
                   {question.answer?.text || "—"}
                 </p>
               </div>
@@ -133,7 +133,7 @@ export function QuestionCard({
                     <Sparkle width={12} height={12} className="text-brand" />
                     AI Feedback
                   </p>
-                  <p className="text-[12px] leading-[1.5] text-ink-soft">
+                  <p className="text-[12px] leading-normal text-ink-soft">
                     {grade.feedback}
                   </p>
                 </div>
@@ -204,7 +204,7 @@ export function OrphanCard({
     <article
       onClick={onSelect}
       className={[
-        "cursor-pointer rounded-[14px] bg-white transition",
+        "cursor-pointer rounded-card bg-white transition",
         selected
           ? "border-2 border-brand-soft shadow-[0_2px_10px_rgba(255,86,35,0.08)]"
           : "border border-transparent hover:border-hairline",
@@ -241,7 +241,7 @@ export function OrphanCard({
         <div className="animate-rise px-3.5 pb-3.5">
           <div className="rounded-[10px] bg-chip px-3 py-2.5">
             <p className="mb-1 text-[11px] font-bold">What the student wrote</p>
-            <p className="text-[12px] leading-[1.5] text-ink-soft">
+            <p className="text-[12px] leading-normal text-ink-soft">
               {answer.text || "—"}
             </p>
           </div>

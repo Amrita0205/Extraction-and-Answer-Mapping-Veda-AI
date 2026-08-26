@@ -70,7 +70,7 @@ export function AnswerSheet({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] bg-white">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel bg-white">
       {/* Wraps rather than squashing: on a narrow phone the zoom and pager
           pills drop to a second row instead of colliding with the title. */}
       <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 bg-ink px-3 py-1.5 text-white">

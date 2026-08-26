@@ -51,7 +51,7 @@ export function UploadScreen({
           />
         </div>
 
-        <div className="mt-5 rounded-[20px] bg-white/55 p-3 backdrop-blur-xl sm:p-4">
+        <div className="mt-5 rounded-panel bg-white/55 p-3 backdrop-blur-xl sm:p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Dropzone
               label="Question Paper"
@@ -143,7 +143,7 @@ function Dropzone({
       className={[
         // The dashed frame stays put once a file is chosen — the chip drops
         // into it rather than replacing it.
-        "flex h-[150px] items-center justify-center rounded-[16px] border border-dashed bg-white/45 px-4 transition sm:h-[190px]",
+        "flex h-[150px] items-center justify-center rounded-2xl border border-dashed bg-white/45 px-4 transition sm:h-[190px]",
         over ? "border-brand bg-brand-wash/60" : "border-black/15",
         file ? "" : "cursor-pointer hover:border-brand/50",
       ].join(" ")}

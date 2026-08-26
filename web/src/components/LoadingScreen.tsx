@@ -39,7 +39,7 @@ export function LoadingScreen({
 
   return (
     <section className="flex min-h-0 flex-1 px-0 pb-3 sm:px-3">
-      <div className="flex flex-1 flex-col items-center justify-center rounded-[20px] bg-white/80 backdrop-blur-xl">
+      <div className="flex flex-1 flex-col items-center justify-center rounded-panel bg-white/80 backdrop-blur-xl">
         <Sparkle
           width={84}
           height={84}
