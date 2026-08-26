@@ -276,6 +276,81 @@ validated against real marks.
 
 ---
 
+## Building the accuracy harness, and what it immediately found
+
+Three of the six evaluation criteria are accuracy claims. None had a number,
+and `eval/out/report.md` had been committed reading `mean F1 0.00 over 0
+sheet(s)` — because the harness had never actually run. Its first line crashed:
+`dataclasses.asdict` called on a pydantic model.
+
+The missing piece was ground truth. Hand-labelling is better evidence, but it
+costs ~15 minutes a sheet and is itself shaky at the edges — a human eyeballing
+a y range is performing the same judgement the metric exists to check. So
+`eval/make_synthetic_case.py` *draws* a sheet at coordinates it chooses and
+records the ink bounds as it writes them. Real prose in a handwriting face, not
+the scribble in `make_mock_pages.py`, because the mapper must be scored on
+reaching the *right* answer and a scribble gives it nothing to be right about.
+One sheet carries every awkward case in the brief: Q3 above Q2, `11(a)`/`11(b)`
+separate, `11(b)` across a page break, nine blanks, and a `Q14` on a paper that
+stops at 13.
+
+Its first run found two bugs that had been degrading every run to date.
+
+### Correct bounding boxes were being thrown away
+
+Highlight IoU came back at **0.29**, and three answers on one page shared an
+identical region. The model had returned:
+
+```
+box_2d: [132, 118, 217, 858, false, false]
+```
+
+— the box, with the two continuation booleans flattened onto the end. Those
+first four numbers are right, within a percent of the true ink bounds. But
+`box_to_fractions` required *exactly* four elements, rejected the whole array,
+and the caller fell back to a whole-page rectangle. Tightening then snapped
+that to every mark on the page, so all three answers "highlighted" the same
+full block of writing.
+
+This is the worst kind of failure: silent, and it produces a plausible-looking
+highlight rather than an error. Reading the first four values of anything at
+least four long took **IoU from 0.29 to 0.89**, and on the real Hindi sheet
+took full-page fallbacks from several to **zero out of 52 regions**.
+
+### An orphaned label was being reassigned by word overlap
+
+Unmatched-answer F1 was **0.00**. The `Q14` answer — osmosis, on a paper that
+ends at 13 — had been handed to Q13, *"Define osmosis"*. Content overlap made
+that look like a confident match, and it cost two things at once: the brief's
+"answers that match no question" case, and Q13's blank status.
+
+The label is the student's own instruction. A block whose written label names a
+number the paper does not contain is now held back from the content,
+adjudication and sequential rungs, left unmatched, and reported with a warning
+saying why. **Unmatched F1 0.00 → 1.00; blanks 8/9 → 9/9.**
+
+On the real Hindi sheet this warning does real work, naming the 11 answers
+labelled 8, 9, 10 and 12 against a reconstructed paper that only contains 1–7 —
+stating the dataset mismatch in the product rather than only in this document.
+
+### Where it landed
+
+| | |
+|---|---|
+| question extraction F1 | 1.00 (15/15) |
+| printed order | 0 inversions |
+| answers mapped correctly | 6/6 |
+| blanks identified | 9/9 |
+| answers matching no question | F1 1.00 |
+| highlight on right page | 6/6 |
+| highlight overlap | median IoU 0.89 |
+
+Rendered handwriting is an easier read than a real scan, so this is a
+calibration case rather than evidence about messy writing. Both bugs it caught
+were real, and neither was visible by looking at output and squinting.
+
+---
+
 ## Things measured and rejected
 
 Recorded so they are not re-attempted.
