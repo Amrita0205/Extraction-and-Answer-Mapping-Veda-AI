@@ -194,7 +194,10 @@ function ScrollDownButton({
           behavior: "smooth",
         })
       }
-      className="animate-rise absolute bottom-5 left-1/2 z-20 grid h-10 w-10 -translate-x-1/2 place-items-center rounded-full border border-hairline bg-white/90 text-ink-soft shadow-[0_4px_16px_rgba(0,0,0,0.14)] backdrop-blur transition hover:bg-white hover:text-ink"
+      // Bottom-right, not centred: every screen here puts its primary action
+      // in the middle of the column, and a centred button lands straight on
+      // top of "Start Mapping" at the height this thing exists to rescue.
+      className="animate-rise absolute bottom-5 right-5 z-20 grid h-10 w-10 place-items-center rounded-full border border-hairline bg-white/90 text-ink-soft shadow-[0_4px_16px_rgba(0,0,0,0.14)] backdrop-blur transition hover:bg-white hover:text-ink"
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
         <path
