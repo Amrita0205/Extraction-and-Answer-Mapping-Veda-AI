@@ -90,7 +90,19 @@ def map_answers(
         question = _resolve(by_key, questions, number, part, taken)
         if question is None:
             continue
-        _assign(block, question, taken, method, 0.97)
+
+        # Not every "label" match is worth the same. A number the student
+        # actually wrote beside the answer is near-certain. A number carried
+        # down from an earlier answer — the student wrote "4. (i)" and then
+        # just "(ii)" — is an inference from writing order, and it is wrong
+        # wherever the run of sub-parts was misread. Showing both as 97% told
+        # the teacher the system was certain in precisely the places it was
+        # guessing.
+        inherited = block.__dict__.get("_inherited_number")
+        if inherited:
+            _assign(block, question, taken, "inherited", 0.82)
+        else:
+            _assign(block, question, taken, method, 0.97)
 
     # --- 3: content similarity for whatever is left. ----------------------
     free_blocks = [
@@ -132,7 +144,11 @@ def map_answers(
         b for b in blocks
         if b.matched_question_id is None and b.id not in orphaned
     ]
-    if free_blocks and not any(b.match_method == "label" for b in blocks):
+    # "inherited" counts as labelled here: the sheet did carry numbers, we just
+    # had to carry them down onto the sub-parts. Reading position off a sheet
+    # that is in fact numbered would be the wrong fallback entirely.
+    labelled = {"label", "inherited"}
+    if free_blocks and not any(b.match_method in labelled for b in blocks):
         free_questions = [q for q in questions if q.id not in taken]
         if len(free_blocks) == len(free_questions) and free_questions:
             warnings.append(

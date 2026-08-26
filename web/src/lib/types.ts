@@ -12,7 +12,7 @@ export type Stage =
   | "done"
   | "failed";
 
-export type MatchMethod = "label" | "semantic" | "sequential" | "none";
+export type MatchMethod = "label" | "inherited" | "semantic" | "sequential" | "none";
 export type Verdict = "correct" | "partial" | "incorrect" | "ungraded";
 
 /** A rectangle on one page, in page fractions (0..1) rather than pixels, so

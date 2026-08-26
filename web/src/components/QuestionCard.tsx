@@ -156,7 +156,9 @@ function MatchNote({ question }: { question: Question }) {
   const how =
     answer.match_method === "label"
       ? "matched by the number the student wrote"
-      : answer.match_method === "semantic"
+      : answer.match_method === "inherited"
+        ? "matched by the sub-part, numbered from the answer above"
+        : answer.match_method === "semantic"
         ? "matched by content — the student did not label it"
         : answer.match_method === "sequential"
           ? "matched by position on the page"

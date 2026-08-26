@@ -22,7 +22,11 @@ Stage = Literal[
     "cancelled",
 ]
 
-MatchMethod = Literal["label", "semantic", "sequential", "none"]
+# "inherited" is a label match too, but on a number carried down from the
+# answer above rather than one the student wrote here. Kept distinct because
+# the UI states which it was, and saying "the number the student wrote" about
+# an inferred number is simply untrue.
+MatchMethod = Literal["label", "inherited", "semantic", "sequential", "none"]
 Verdict = Literal["correct", "partial", "incorrect", "ungraded"]
 
 
