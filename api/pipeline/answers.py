@@ -81,7 +81,7 @@ def extract(pages: list[RenderedPage]) -> tuple[list[AnswerBlock], list[str]]:
         blocks = data.get("blocks") if isinstance(data, dict) else data
         per_page.append([b for b in (blocks or []) if isinstance(b, dict)])
 
-    raw = _to_blocks(per_page, pages)
+    raw = _inherit_numbers(_to_blocks(per_page, pages))
     merged = _merge_continuations(raw)
     log.info("extracted %s answer blocks (%s before merge)", len(merged), len(raw))
     return merged, warnings
@@ -118,6 +118,31 @@ def _to_blocks(
                 item.get("continues_on_next_page")
             )
     return out
+
+
+def _inherit_numbers(blocks: list[AnswerBlock]) -> list[AnswerBlock]:
+    """Give a bare sub-part the question number of the answer above it.
+
+    A student writes "4. (i)" once and then just "(ii)", "(iii)" underneath. On
+    its own, "(ii)" matches nothing — it has no number for the label rung of the
+    ladder to compare. Carrying the last full number forward is what turns most
+    of a booklet from unmatched into matched, so it is done before mapping and
+    before continuation merging, while blocks are still in reading order.
+    """
+    last_number: str | None = None
+    for block in blocks:
+        number, _ = labels.parse_leading(block.label)
+        if number:
+            last_number = number
+            continue
+
+        part = labels.bare_part(block.label)
+        if part and last_number:
+            block.label = f"{last_number} ({part})"
+            # Worth recording: an inherited label is a weaker signal than one
+            # the student actually wrote, and the mapper may want to say so.
+            block.__dict__["_inherited_number"] = True
+    return blocks
 
 
 def _merge_continuations(blocks: list[AnswerBlock]) -> list[AnswerBlock]:

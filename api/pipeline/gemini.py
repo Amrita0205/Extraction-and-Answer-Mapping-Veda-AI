@@ -17,15 +17,46 @@ from __future__ import annotations
 import json
 import logging
 import os
+import base64
 import random
 import re
 import time
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 log = logging.getLogger(__name__)
 
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+PROVIDER = os.environ.get("AI_PROVIDER", "gemini").lower()
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
+
+# The free tier grants 20 requests per day *per model*, so a single answer
+# sheet (one call per page) can exhaust one model's daily allowance. Each name
+# below has its own quota bucket, so we walk down the list when one runs dry.
+#
+# Order is by measured latency on a rendered A4 page, and the spread is not
+# small: the two leaders answer in ~2.5s, while `gemini-flash-lite-latest`
+# takes ~170s on the same page. That alias resolves to a thinking model *and*
+# rejects `thinking_budget`, so its thinking cannot be turned off — which is
+# why it is not in this list despite the promising name.
+MODEL_FALLBACKS = [
+    m.strip()
+    for m in os.environ.get(
+        "GEMINI_MODELS",
+        "gemini-3.1-flash-lite,gemini-3.5-flash-lite,"
+        "gemini-3.5-flash,gemini-3-flash-preview",
+    ).split(",")
+    if m.strip()
+]
+
+# Some models reject `thinking_budget` outright (400 INVALID_ARGUMENT). We only
+# find out by asking, so remember which ones refused and stop sending it.
+_no_thinking: set[str] = set()
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma3:12b")
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 _client = None
 
 
@@ -88,6 +119,9 @@ def generate_json(
     Retries on transient errors and on unparseable JSON. Free-tier rate limits
     show up as 429s often enough that the backoff is not optional.
     """
+    if PROVIDER == "ollama":
+        return _generate_ollama(prompt, images, temperature=temperature)
+
     from google.genai import types as gt
 
     parts: list[Any] = []
@@ -99,44 +133,112 @@ def generate_json(
         )
     parts.append(gt.Part.from_text(text=prompt))
 
-    config: dict[str, Any] = {
-        "response_mime_type": "application/json",
-        "temperature": temperature,
-    }
-    # Extraction is a perception task, not a reasoning one — thinking tokens
-    # mostly cost latency here. Grading turns it back on.
-    if thinking_budget is not None:
-        try:
+    def build_config(model: str) -> dict[str, Any]:
+        config: dict[str, Any] = {
+            "response_mime_type": "application/json",
+            "temperature": temperature,
+        }
+        # Extraction is a perception task, not a reasoning one. Thinking is not
+        # a mild cost here: the same page takes 3s with the budget at zero and
+        # 176s with it left at the default. Grading turns it back on.
+        if thinking_budget is not None and model not in _no_thinking:
             config["thinking_config"] = gt.ThinkingConfig(
                 thinking_budget=thinking_budget
             )
-        except Exception:
-            pass
+        return config
+
+    # Try the configured model first, then the rest of the rotation.
+    rotation = [MODEL] + [m for m in MODEL_FALLBACKS if m != MODEL]
 
     last: Exception | None = None
-    for attempt in range(attempts):
-        try:
-            response = client().models.generate_content(
-                model=MODEL,
-                contents=[gt.Content(role="user", parts=parts)],
-                config=config,
-            )
-            return _parse_json(response.text or "")
-        except GeminiUnavailable:
-            raise
-        except Exception as exc:  # noqa: BLE001 - retry on anything transient
-            last = exc
-            wait = min(2**attempt + random.random(), 20)
-            log.warning(
-                "gemini call failed (attempt %s/%s): %s — retrying in %.1fs",
-                attempt + 1,
-                attempts,
-                exc,
-                wait,
-            )
-            time.sleep(wait)
+    for model in rotation:
+        for attempt in range(attempts):
+            try:
+                response = client().models.generate_content(
+                    model=model,
+                    contents=[gt.Content(role="user", parts=parts)],
+                    config=build_config(model),
+                )
+                return _parse_json(response.text or "")
+            except GeminiUnavailable:
+                raise
+            except Exception as exc:  # noqa: BLE001 - retry on anything transient
+                last = exc
+                text = str(exc)
 
-    raise RuntimeError(f"Gemini call failed after {attempts} attempts: {last}")
+                # The model refuses a thinking budget: drop it and re-ask once.
+                if "INVALID_ARGUMENT" in text and model not in _no_thinking:
+                    _no_thinking.add(model)
+                    log.info("%s rejects thinking_budget — retrying without it", model)
+                    continue
+
+                # Daily quota gone, or the model is unavailable. Waiting will
+                # not help; the next model has its own bucket.
+                if "RESOURCE_EXHAUSTED" in text or "UNAVAILABLE" in text:
+                    log.warning("%s is exhausted or unavailable — trying the next model", model)
+                    break
+
+                wait = min(2**attempt + random.random(), 20)
+                log.warning(
+                    "%s failed (attempt %s/%s): %s — retrying in %.1fs",
+                    model,
+                    attempt + 1,
+                    attempts,
+                    exc,
+                    wait,
+                )
+                time.sleep(wait)
+
+    raise RuntimeError(
+        f"Every model in the rotation failed ({', '.join(rotation)}). Last error: {last}"
+    )
+
+
+def _generate_ollama(
+    prompt: str,
+    images: list[Path] | None,
+    *,
+    temperature: float,
+) -> Any:
+    """Call a local Ollama vision model using its OpenAI-like chat payload."""
+    from urllib.error import HTTPError, URLError
+    from urllib.request import Request, urlopen
+
+    encoded_images = [
+        base64.b64encode(image.read_bytes()).decode("ascii")
+        for image in images or []
+    ]
+
+    payload = json.dumps(
+        {
+            "model": OLLAMA_MODEL,
+            "messages": [
+                {"role": "user", "content": prompt, "images": encoded_images}
+            ],
+            "format": "json",
+            "stream": False,
+            "options": {"temperature": temperature},
+        }
+    ).encode("utf-8")
+    request = Request(
+        f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=300) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise RuntimeError(
+            f"Ollama is unavailable at {OLLAMA_BASE_URL}. "
+            f"Start Ollama and pull {OLLAMA_MODEL}."
+        ) from exc
+
+    text = data.get("message", {}).get("content", "")
+    if not text:
+        raise RuntimeError("Ollama returned an empty response.")
+    return _parse_json(text)
 
 
 def box_to_fractions(box: Any) -> tuple[float, float, float, float] | None:

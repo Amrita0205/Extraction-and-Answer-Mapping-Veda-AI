@@ -3,7 +3,7 @@ uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 python-dotenv==1.0.1
 pydantic==2.10.4
-google-genai==0.8.0
+google-genai>=2.20.0
 PyMuPDF==1.25.1
 # Ranges rather than pins: these two are commonly already installed alongside
 # other PDF tooling, and pinning them exactly downgrades whatever else the

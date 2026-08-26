@@ -70,6 +70,27 @@ def parse_leading(text: str | None) -> tuple[str | None, str | None]:
     return _normalise(match)
 
 
+# A sub-part written on its own: "(ii)", "ii)", "(b)". Students stop repeating
+# the question number after the first sub-part, so most of an answer booklet is
+# labelled this way.
+_BARE_PART = re.compile(
+    r"^\(?\s*(?P<part>[ivx]{1,4}|[a-z])\s*[\)\.\]]",
+    re.IGNORECASE,
+)
+_HAS_NUMBER = re.compile(r"^\s*(?:q\w*\s*[\.\)\-:]?\s*)?\d", re.IGNORECASE)
+
+
+def bare_part(label: str | None) -> str | None:
+    """`"(ii)"` -> `"ii"`, but `"4. (i)"` -> `None` (it has its own number)."""
+    if not label:
+        return None
+    text = _clean(label)
+    if _HAS_NUMBER.match(text):
+        return None
+    match = _BARE_PART.match(text)
+    return match.group("part").lower() if match else None
+
+
 def _normalise(match: re.Match[str]) -> tuple[str | None, str | None]:
     number = match.group("number")
     part = (
@@ -85,10 +106,25 @@ def _normalise(match: re.Match[str]) -> tuple[str | None, str | None]:
     return number, part
 
 
+_PART_TRIM = re.compile(r"[^a-z0-9]", re.IGNORECASE)
+
+
+def clean_part(part: str | None) -> str:
+    """`"(i)"`, `"i."`, `"[I]"` -> `"i"`.
+
+    The two sides of a match arrive punctuated differently: the paper prints
+    "(i)" and a model reading it keeps the brackets, while a label parsed off a
+    student's answer comes back bare. Comparing those two strings directly is
+    the difference between a question being matched and being reported as
+    unanswered, so every comparison goes through here.
+    """
+    return _PART_TRIM.sub("", (part or "")).lower()
+
+
 def key(number: str | None, part: str | None) -> str:
     """A stable identity for a question, used to join answers to questions."""
     n = (number or "").lstrip("0") or (number or "")
-    return f"{n}|{(part or '').lower()}"
+    return f"{n}|{clean_part(part)}"
 
 
 def sort_key(number: str | None, part: str | None) -> tuple:
@@ -97,7 +133,7 @@ def sort_key(number: str | None, part: str | None) -> tuple:
         n = int(number or 0)
     except ValueError:
         n = 0
-    p = (part or "").lower()
+    p = clean_part(part)
     if not p:
         rank = -1
     elif p in ROMAN:

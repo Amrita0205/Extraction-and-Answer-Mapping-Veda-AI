@@ -1,9 +1,15 @@
 """Extract every question from the question paper, in printed order.
 
-Printed papers usually arrive as a PDF with a real text layer. When that is the
-case we send the text rather than the page image: OCR error is the dominant
-source of extraction mistakes, and a text layer has none. We fall back to
-vision for scans and photographs.
+Papers usually arrive as a PDF with a real text layer, and that layer is the
+best available source for the *wording* of a question — it carries no OCR
+error. It is a poor source for the paper's *structure*: PDF text extraction
+routinely drops inter-word spaces and renders sub-part markers like "(i)" as
+replacement glyphs, which is near-certain for Indic scripts. Losing those
+markers is expensive, because they are what the answer sheet is matched on.
+
+So each page goes to the model as an image *and* as its text layer, with the
+model told to read structure off the image and wording off the text. Papers run
+to a page or three, so the extra vision calls are cheap.
 """
 
 from __future__ import annotations
@@ -11,7 +17,7 @@ from __future__ import annotations
 import logging
 
 from . import gemini, labels
-from .render import RenderedPage, has_text_layer
+from .render import RenderedPage
 from .schemas import Question
 
 log = logging.getLogger(__name__)
@@ -41,13 +47,8 @@ Return JSON: {"questions": [{"number": string, "part": string|null,
 def extract(pages: list[RenderedPage]) -> tuple[list[Question], list[str]]:
     warnings: list[str] = []
 
-    if has_text_layer(pages):
-        raw = _from_text(pages)
-        source = "text layer"
-    else:
-        raw = _from_images(pages)
-        source = "vision"
-    log.info("extracted %s question candidates via %s", len(raw), source)
+    raw = _from_pages(pages)
+    log.info("extracted %s question candidates", len(raw))
 
     questions = _normalise(raw, warnings)
     if not questions:
@@ -58,27 +59,35 @@ def extract(pages: list[RenderedPage]) -> tuple[list[Question], list[str]]:
     return questions, warnings
 
 
-def _from_text(pages: list[RenderedPage]) -> list[dict]:
-    body = "\n\n".join(
-        f"--- PAGE {p.index} ---\n{p.text_layer}" for p in pages
-    )
-    prompt = (
-        "You are given the extracted text of an exam question paper, page by "
-        "page. Identify every question.\n"
-        f"{_RULES}\n{_SCHEMA}\n\n{body}"
-    )
-    data = gemini.generate_json(prompt)
-    return _unwrap(data)
+_TEXT_LAYER_NOTE = """
+The PDF's own text layer for this page is quoted below. It is usually faithful
+for wording, but it is not trustworthy for structure: extractors routinely drop
+the spaces between words and replace sub-part markers such as "(i)" with a
+replacement glyph, and this is close to guaranteed for Indic scripts. So read
+the NUMBERING, SUB-PART LABELS and MARKS off the image, and use the text layer
+only to confirm the wording of a question you can already see.
+"""
 
 
-def _from_images(pages: list[RenderedPage]) -> list[dict]:
-    # One page per call: page indices drift when several pages share a request.
+def _from_pages(pages: list[RenderedPage]) -> list[dict]:
+    """Read each page as an image, with its text layer alongside when it has one.
+
+    Question papers run to a page or three, so paying for vision on all of them
+    is cheap, and it is the only way to recover sub-part labels that the text
+    layer has mangled. One page per call: page indices drift when several pages
+    share a request.
+    """
     out: list[dict] = []
     for page in pages:
+        text = (page.text_layer or "").strip()
         prompt = (
             "This image is page "
             f"{page.index} of an exam question paper. Identify every question "
             "printed on THIS page.\n"
+        )
+        if text:
+            prompt += f"{_TEXT_LAYER_NOTE}--- TEXT LAYER ---\n{text}\n--- END ---\n"
+        prompt += (
             f"{_RULES}\n{_SCHEMA}\n"
             f"Set `page` to {page.index} on every entry."
         )
@@ -111,7 +120,10 @@ def _normalise(raw: list[dict], warnings: list[str]) -> list[Question]:
     for item in raw:
         number = str(item.get("number") or "").strip()
         part = item.get("part")
-        part = str(part).strip().lower() if part else None
+        # Models hand back the sub-part as the paper prints it — "(i)", "i.",
+        # "[b]". Strip it to bare "i" / "b" so it compares equal to a part
+        # parsed off a student's answer, and so `display` can re-add brackets.
+        part = labels.clean_part(str(part)) or None if part else None
 
         # The model sometimes packs the sub-part into `number` ("11(b)").
         if not part or not number.isdigit():
