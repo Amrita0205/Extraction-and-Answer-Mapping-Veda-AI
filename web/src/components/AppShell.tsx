@@ -36,6 +36,21 @@ const NAV: { key: SectionKey; label: string; Icon: typeof Home }[] = [
   { key: "library", label: "My Library", Icon: Library },
 ];
 
+/**
+ * The teacher the design shows, in one place.
+ *
+ * The brief specifies no authentication, so there is no account to read this
+ * from — but it was written out in three separate components, which is how a
+ * demo ends up half-renamed. Whatever replaces it later (a session, a prop)
+ * has one seam to replace rather than three literals to hunt down.
+ */
+export const DEMO_TEACHER = {
+  name: "Madhur Rastogi",
+  school: "Delhi Public School",
+  city: "Bokaro Steel City",
+  avatar: "/avatar.png",
+} as const;
+
 const BLURB: Record<string, string> = {
   home: "The teacher's dashboard — classes, recent exams and pending evaluations.",
   classroom: "Class rosters, seating and student profiles.",
@@ -339,10 +354,10 @@ function Sidebar({
             <School />
             <span className="min-w-0">
               <span className="block truncate text-[12px] font-semibold leading-tight">
-                Delhi Public School
+                {DEMO_TEACHER.school}
               </span>
               <span className="block truncate text-[10.5px] text-ink-faint">
-                Bokaro Steel City
+                {DEMO_TEACHER.city}
               </span>
             </span>
           </div>
@@ -429,7 +444,7 @@ function TopBar({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/avatar.png"
+            src={DEMO_TEACHER.avatar}
             alt=""
             width={184}
             height={184}
@@ -437,7 +452,7 @@ function TopBar({
             draggable={false}
           />
           <span className="hidden text-[13px] font-medium lg:inline">
-            Madhur Rastogi
+            {DEMO_TEACHER.name}
           </span>
           <Chevron width={15} height={15} className="text-ink-faint" />
         </button>
@@ -484,7 +499,7 @@ function Popover({
           <div className="mb-2.5 flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/avatar.png"
+              src={DEMO_TEACHER.avatar}
               alt=""
               width={184}
               height={184}
@@ -492,10 +507,10 @@ function Popover({
             />
             <span>
               <span className="block text-[12.5px] font-semibold">
-                Madhur Rastogi
+                {DEMO_TEACHER.name}
               </span>
               <span className="block text-[11px] text-ink-faint">
-                Delhi Public School
+                {DEMO_TEACHER.school}
               </span>
             </span>
           </div>
