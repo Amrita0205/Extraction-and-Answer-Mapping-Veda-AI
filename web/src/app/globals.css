@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+/**
+ * Every value the Figma file specifies lives here. Restyling to match a design
+ * revision is a change in this block, not a sweep through components.
+ */
+@theme {
+  --font-sans: "Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+
+  /* Brand */
+  --color-brand: #ff5623;
+  --color-brand-soft: #ff8d36;
+  --color-brand-wash: #ffece5;
+
+  /* Neutrals */
+  --color-ink: #303030;
+  --color-ink-soft: #6b6b6b;
+  --color-ink-faint: #9a9a9a;
+  --color-hairline: #e8e8e8;
+  --color-chip: #f6f6f6;
+
+  /* Page background gradient */
+  --color-page-from: #eeeeee;
+  --color-page-to: #dadada;
+
+  /* Score pills — full marks, partial, zero */
+  --color-good: #34ac15;
+  --color-good-bg: rgb(69 181 41 / 0.1);
+  --color-warn: #e3600f;
+  --color-warn-bg: rgb(255 153 0 / 0.1);
+  --color-bad: #c0350a;
+  --color-bad-bg: #ffe9e2;
+
+  /* Answer-sheet highlight */
+  --color-highlight-fill: rgb(94 255 53 / 0.1);
+  --color-highlight-line: #3dd218;
+  --color-highlight-tag: #34ac15;
+
+  --radius-panel: 20px;
+  --radius-card: 14px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background:
+    radial-gradient(
+      52rem 30rem at 12% 96%,
+      rgb(255 141 54 / 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      46rem 26rem at 88% 8%,
+      rgb(255 86 35 / 0.14),
+      transparent 62%
+    ),
+    linear-gradient(150deg, var(--color-page-from), var(--color-page-to));
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The glass panels the design layers over those blobs. */
+@utility glass {
+  background: rgb(255 255 255 / 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(0 0 0 / 0.16) transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.no-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(0 0 0 / 0.16);
+  border-radius: 999px;
+}
+.no-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* "Extracting…" on the loading screen. */
+.gradient-text {
+  background: linear-gradient(92deg, var(--color-ink) 8%, var(--color-brand) 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes sparkle-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.82;
+  }
+}
+.animate-sparkle {
+  animation: sparkle-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.24s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sparkle,
+  .animate-rise {
+    animation: none;
+  }
+}
