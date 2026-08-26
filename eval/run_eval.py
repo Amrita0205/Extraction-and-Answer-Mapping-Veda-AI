@@ -265,9 +265,29 @@ def main() -> int:
 
     text = "\n".join(lines)
     (OUT / "report.md").write_text(text)
+
+    # Machine-readable twin of the aggregate block, so other tooling (the
+    # dataset-sweep dashboard) can read real numbers instead of scraping
+    # markdown.
+    summary = {
+        "cases": len(agg["f1"]),
+        "extraction_f1_median": M.median(agg["f1"]),
+        "mapped_rate": agg["mapped"].value,
+        "mapped_hits": agg["mapped"].hits,
+        "mapped_total": agg["mapped"].total,
+        "blanks_rate": agg["blanks"].value,
+        "blanks_hits": agg["blanks"].hits,
+        "blanks_total": agg["blanks"].total,
+        "page_ok_rate": agg["page"].value,
+        "page_ok_hits": agg["page"].hits,
+        "page_ok_total": agg["page"].total,
+        "highlight_iou_median": M.median(agg["iou"]),
+    }
+    (OUT / "summary.json").write_text(json.dumps(summary, indent=2))
+
     print()
     print(text)
-    print(f"\nwritten to {OUT / 'report.md'}")
+    print(f"\nwritten to {OUT / 'report.md'} and {OUT / 'summary.json'}")
     return 0
 
 
