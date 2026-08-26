@@ -20,7 +20,14 @@ services:
         value: "3.12.6"
       - key: GEMINI_API_KEY
         sync: false
+      # Measured on a rendered A4 page: this model answers in ~2.5s, where
+      # gemini-3.6-flash takes ~190s and gemini-flash-lite-latest ~170s.
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.1-flash-lite
+      # The free tier allows 20 requests per day *per model*, and one answer
+      # sheet costs one request per page. Each name here has its own quota
+      # bucket, so a run that exhausts the first can finish on the next.
+      - key: GEMINI_MODELS
+        value: gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3-flash-preview
       - key: ALLOWED_ORIGINS
         value: "*"

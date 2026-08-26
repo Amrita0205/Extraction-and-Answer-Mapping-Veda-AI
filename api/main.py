@@ -18,7 +18,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from pipeline import jobs
+from pipeline import gemini, jobs
 from pipeline.schemas import JobStatus
 
 logging.basicConfig(
@@ -44,8 +44,11 @@ app.add_middleware(
 def health() -> dict:
     return {
         "ok": True,
-        "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
-        "key_configured": bool(
+        "provider": gemini.PROVIDER,
+        "model": os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+        "ollama_model": gemini.OLLAMA_MODEL,
+        "key_configured": gemini.PROVIDER == "ollama"
+        or bool(
             os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         ),
     }
