@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -62,7 +61,7 @@ def run_pipeline(case: dict, case_dir: Path, cache: Path) -> dict:
                     {
                         "text": q.answer.text,
                         "method": q.answer.match_method,
-                        "regions": [asdict(r) for r in q.answer.regions],
+                        "regions": [r.model_dump() for r in q.answer.regions],
                     }
                     if q.answer
                     else None

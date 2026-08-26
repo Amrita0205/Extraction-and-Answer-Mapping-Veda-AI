@@ -162,6 +162,52 @@ nothing to recompute on resize.
 
 ---
 
+## Accuracy
+
+Three of the six things this is judged on — question extraction, answer
+mapping, correct highlighting — are claims that mean nothing without a number,
+so they are measured rather than asserted.
+
+`eval/make_synthetic_case.py` draws an answer sheet at coordinates it chooses
+and records the ink bounds as it writes them, so the ground truth is exact
+rather than eyeballed. The sheet answers the paper in `spike/out/` and puts
+every awkward case from the brief on three pages: Q3 answered above Q2, `11(a)`
+and `11(b)` as separate answers, `11(b)` running across a page break, nine
+questions left blank, and a `Q14` on a paper that stops at 13.
+
+Measured on that case (`eval/out/report.md`):
+
+| | |
+|---|---|
+| question extraction F1 | **1.00** (precision 1.00, recall 1.00, 15/15) |
+| printed order | **0 inversions** |
+| answers mapped correctly | **100%** (6/6) |
+| unanswered questions identified | **100%** (9/9) |
+| answers matching no question | **F1 1.00** |
+| highlight on the right page | **100%** (6/6) |
+| highlight overlap with true ink | **median IoU 0.89** |
+
+```bash
+python eval/make_synthetic_case.py     # regenerate the sheet and its labels
+python eval/run_eval.py --case synthetic
+python eval/run_eval.py --rescore      # re-score the cache, no API calls
+```
+
+**What this is and isn't.** It is a calibration case: rendered handwriting, so
+transcription is easier than a real scan, and a run that does not score near
+perfect points at the pipeline rather than at the labelling. It is not evidence
+about messy handwriting. It caught two real bugs on its first run — a box
+format the parser was rejecting, and an orphaned label being reassigned by
+content overlap — both of which had been silently degrading real runs.
+
+For breadth over real handwriting, `eval/run_dataset_sweep.py` runs every
+subject in `datasets/` and reports coverage against each paper's own printed
+numbering. Read the caveat in **Assumptions and limitations** first: those
+papers are reconstructions, so end-to-end accuracy over them is not a number
+worth quoting.
+
+---
+
 ## Running it
 
 ### Frontend
