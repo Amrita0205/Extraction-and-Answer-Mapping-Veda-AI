@@ -159,6 +159,12 @@ export const Minus = (props: P) => (
   </svg>
 );
 
+export const Menu = (props: P) => (
+  <svg {...base(props)}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);
+
 export const PdfBadge = (props: P) => (
   <svg width={34} height={34} viewBox="0 0 34 34" fill="none" {...props}>
     <rect width="34" height="34" rx="8" fill="#ffe9e2" />
