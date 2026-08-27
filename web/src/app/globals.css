@@ -40,6 +40,17 @@
   --color-highlight-line: #3dd218;
   --color-highlight-tag: #34ac15;
 
+  /* Grade bands, A to D. Checked with the palette validator rather than
+     picked by eye: the obvious traffic-light set failed the normal-vision
+     separation floor between its orange and red, and a lighter yellow sat
+     outside the lightness band. Green-to-red is inherently weak for
+     red-green colour blindness, so every band is also labelled with its
+     letter and its count — the colour is never the only cue. */
+  --color-grade-a: #2b8a3e;
+  --color-grade-b: #c9a227;
+  --color-grade-c: #e8590c;
+  --color-grade-d: #a4133c;
+
   --radius-panel: 20px;
   --radius-card: 14px;
   /* The third tier: a block set into a card — the transcript, the feedback,

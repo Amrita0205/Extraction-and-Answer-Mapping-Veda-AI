@@ -67,115 +67,225 @@ function sectionTitle(section: SectionKey): string {
   return section === "toolkit" ? "AI Teacher's Toolkit" : "Settings";
 }
 
-type DemoRow = {
-  left: string;
-  meta: string;
-  status: string;
-  tone?: "good" | "warn";
+type Band = { grade: string; caption?: string; count: number };
+type Ranked = { label: string; pct: number };
+
+type Dash = {
+  summaryTitle: string;
+  gauge: { value: number; total: number; label: string };
+  stats: { value: string; label: string; tone?: "good" | "warn" | "bad" }[];
+  segmentation?: { title: string; bands: Band[] };
+  ranked?: { title: string; rows: Ranked[] };
+  insights?: { title: string; items: string[] };
 };
 
 /**
  * Static content for the sections outside this assignment's scope.
  *
  * The brief scopes the build to the Exams flow, so none of this is wired to
- * anything — it exists so the surrounding product reads as a whole rather than
+ * anything - it exists so the surrounding product reads as a whole rather than
  * as five dead links. Every screen that shows it is labelled "Sample data",
  * because an invented number that looks live is worse than an empty state: a
  * reviewer cannot otherwise tell which parts were actually built.
  */
-const SECTION_DEMO: Record<
-  SectionKey,
-  { stats: [string, string][]; listTitle: string; rows: DemoRow[] }
-> = {
+const SECTION_DEMO: Record<SectionKey, Dash> = {
   home: {
+    summaryTitle: "This week",
+    gauge: { value: 41, total: 50, label: "Sheets marked" },
     stats: [
-      ["Classes", "6"],
-      ["Students", "184"],
-      ["Papers awaiting marking", "3"],
-      ["Marked this week", "41"],
+      { value: "6", label: "Classes" },
+      { value: "184", label: "Students" },
+      { value: "3", label: "Awaiting marking", tone: "warn" },
+      { value: "92%", label: "Attendance", tone: "good" },
     ],
-    listTitle: "Recent activity",
-    rows: [
-      { left: "Class XII-A · Physics", meta: "Term 1 paper", status: "Marked", tone: "good" },
-      { left: "Class XII-B · Chemistry", meta: "38 sheets", status: "In progress", tone: "warn" },
-      { left: "Class XI-C · Biology", meta: "Uploaded today", status: "Queued" },
-    ],
+    segmentation: {
+      title: "Student Segmentation (Based on grades)",
+      bands: [
+        { grade: "A", count: 12 },
+        { grade: "B", count: 15 },
+        { grade: "C", count: 13 },
+        { grade: "D", caption: "Below", count: 10 },
+      ],
+    },
+    ranked: {
+      title: "Learning Gap Analysis",
+      rows: [
+        { label: "Ohm\u2019s Law Application", pct: 0.23 },
+        { label: "Resistance in Parallel Circuits", pct: 0.18 },
+        { label: "Potential Difference and EMF", pct: 0.15 },
+        { label: "Interpreting Circuit Diagrams", pct: 0.12 },
+        { label: "Series vs Parallel Circuits", pct: 0.08 },
+      ],
+    },
+    insights: {
+      title: "Insights for Teachers",
+      items: [
+        "Simran Kaur \u2014 misreads series vs parallel logic; a circuit-building demo would help.",
+        "Revise Ohm\u2019s Law in class using real appliances \u2014 a fan, a heater.",
+        "Clarify the derivations for power, and how the formulas differ.",
+        "Twelve students scored below D and would benefit from an extra session.",
+      ],
+    },
   },
   classroom: {
+    summaryTitle: "Class overview",
+    gauge: { value: 184, total: 200, label: "Enrolled" },
     stats: [
-      ["Classes", "6"],
-      ["Students", "184"],
-      ["Average attendance", "92%"],
-      ["Subjects taught", "3"],
+      { value: "6", label: "Classes" },
+      { value: "3", label: "Subjects" },
+      { value: "92%", label: "Attendance", tone: "good" },
+      { value: "31", label: "Average class size" },
     ],
-    listTitle: "Your classes",
-    rows: [
-      { left: "XII-A · Physics", meta: "38 students", status: "Active", tone: "good" },
-      { left: "XII-B · Chemistry", meta: "36 students", status: "Active", tone: "good" },
-      { left: "XI-C · Biology", meta: "34 students", status: "Active", tone: "good" },
-      { left: "XI-D · Physics", meta: "40 students", status: "Archived" },
-    ],
+    segmentation: {
+      title: "Student Segmentation (Based on grades)",
+      bands: [
+        { grade: "A", count: 38 },
+        { grade: "B", count: 61 },
+        { grade: "C", count: 52 },
+        { grade: "D", caption: "Below", count: 33 },
+      ],
+    },
+    ranked: {
+      title: "Attendance by class",
+      rows: [
+        { label: "XII-A \u00b7 Physics", pct: 0.96 },
+        { label: "XII-B \u00b7 Chemistry", pct: 0.94 },
+        { label: "XI-C \u00b7 Biology", pct: 0.91 },
+        { label: "XI-D \u00b7 Physics", pct: 0.87 },
+      ],
+    },
+    insights: {
+      title: "Insights for Teachers",
+      items: [
+        "XI-D attendance has slipped four weeks running.",
+        "XII-A is ready to move on from electrostatics.",
+        "Four students have missed two consecutive assessments.",
+      ],
+    },
   },
   assignments: {
+    summaryTitle: "Assessment Summary",
+    gauge: { value: 45, total: 50, label: "Submissions" },
     stats: [
-      ["Set this term", "18"],
-      ["Awaiting submission", "4"],
-      ["Returned", "12"],
-      ["Overdue", "2"],
+      { value: "82%", label: "Average score" },
+      { value: "95%", label: "Top score", tone: "good" },
+      { value: "20/25", label: "Class median" },
+      { value: "40%", label: "Lowest score", tone: "bad" },
     ],
-    listTitle: "Recent assignments",
-    rows: [
-      { left: "Electrostatics worksheet", meta: "XII-A · due 12 Mar", status: "Returned", tone: "good" },
-      { left: "Organic reactions set 3", meta: "XII-B · due 15 Mar", status: "Submitted", tone: "warn" },
-      { left: "Photosynthesis revision", meta: "XI-C · due 18 Mar", status: "Open" },
-    ],
+    segmentation: {
+      title: "Student Segmentation (Based on grades)",
+      bands: [
+        { grade: "A", count: 12 },
+        { grade: "B", count: 15 },
+        { grade: "C", count: 13 },
+        { grade: "D", caption: "Below", count: 10 },
+      ],
+    },
+    ranked: {
+      title: "Learning Gap Analysis",
+      rows: [
+        { label: "Ohm\u2019s Law Application", pct: 0.23 },
+        { label: "Resistance in Parallel Circuits", pct: 0.18 },
+        { label: "Potential Difference and EMF", pct: 0.15 },
+        { label: "Interpreting Circuit Diagrams", pct: 0.12 },
+        { label: "Series vs Parallel Circuits", pct: 0.08 },
+      ],
+    },
+    insights: {
+      title: "Insights for Teachers",
+      items: [
+        "Simran Kaur \u2014 misreads series vs parallel logic; needs a circuit-building demo.",
+        "Revise Ohm\u2019s Law with real-life problems \u2014 a fan, a heater.",
+        "Clarify the power derivations and how the formulas differ.",
+        "Arrange an extra session for students below D.",
+      ],
+    },
   },
   exams: {
+    summaryTitle: "",
+    gauge: { value: 0, total: 0, label: "" },
     stats: [],
-    listTitle: "",
-    rows: [],
   },
   library: {
+    summaryTitle: "Library",
+    gauge: { value: 27, total: 40, label: "Papers saved" },
     stats: [
-      ["Saved papers", "27"],
-      ["Rubrics", "9"],
-      ["Question banks", "4"],
-      ["Shared with staff", "11"],
+      { value: "27", label: "Saved papers" },
+      { value: "9", label: "Rubrics" },
+      { value: "4", label: "Question banks" },
+      { value: "11", label: "Shared with staff" },
     ],
-    listTitle: "Saved papers",
-    rows: [
-      { left: "Physics · Term 1 2025", meta: "3 pages · 15 questions", status: "Saved", tone: "good" },
-      { left: "Chemistry · Mock 2", meta: "2 pages · 12 questions", status: "Saved", tone: "good" },
-      { left: "Biology marking scheme", meta: "Rubric", status: "Draft", tone: "warn" },
-    ],
+    ranked: {
+      title: "Most reused papers",
+      rows: [
+        { label: "Physics \u00b7 Term 1 2025", pct: 0.78 },
+        { label: "Chemistry \u00b7 Mock 2", pct: 0.64 },
+        { label: "Biology \u00b7 Unit test 3", pct: 0.41 },
+        { label: "Physics \u00b7 Mock 1", pct: 0.27 },
+      ],
+    },
+    insights: {
+      title: "Suggestions",
+      items: [
+        "Three papers have no rubric attached, so grading falls back to two marks a question.",
+        "The Biology marking scheme is still a draft.",
+        "Two question banks have not been touched this term.",
+      ],
+    },
   },
   settings: {
+    summaryTitle: "Workspace",
+    gauge: { value: 12, total: 15, label: "Seats used" },
     stats: [
-      ["School", "DPS Bokaro"],
-      ["Marking scale", "Marks"],
-      ["Language", "English"],
-      ["Members", "12"],
+      { value: "DPS Bokaro", label: "School" },
+      { value: "Marks", label: "Marking scale" },
+      { value: "English", label: "Language" },
+      { value: "12", label: "Members" },
     ],
-    listTitle: "Preferences",
-    rows: [
-      { left: "Default marks per question", meta: "Used when the paper prints none", status: "2", tone: "good" },
-      { left: "Highlight colour", meta: "Answer regions on the sheet", status: "Green", tone: "good" },
-      { left: "AI feedback", meta: "Per-question comments", status: "On", tone: "good" },
-    ],
+    ranked: {
+      title: "Marking defaults",
+      rows: [
+        { label: "Default marks per question \u2014 2", pct: 1 },
+        { label: "AI feedback on answers \u2014 on", pct: 1 },
+        { label: "Highlight colour \u2014 green", pct: 1 },
+        { label: "Auto-archive after 90 days \u2014 off", pct: 0.12 },
+      ],
+    },
+    insights: {
+      title: "Account",
+      items: [
+        "Sign-in is not enabled in this build, so there is one shared demo workspace.",
+        "Marking preferences apply to every class.",
+        "Three seats are unused.",
+      ],
+    },
   },
   toolkit: {
+    summaryTitle: "Toolkit usage",
+    gauge: { value: 23, total: 40, label: "Runs this month" },
     stats: [
-      ["Tools available", "8"],
-      ["Used this month", "23"],
-      ["Time saved", "~14h"],
-      ["Credits left", "120"],
+      { value: "8", label: "Tools available" },
+      { value: "23", label: "Used this month" },
+      { value: "~14h", label: "Time saved", tone: "good" },
+      { value: "120", label: "Credits left" },
     ],
-    listTitle: "Teacher tools",
-    rows: [
-      { left: "Extraction & answer mapping", meta: "Marks a scanned answer sheet", status: "Built", tone: "good" },
-      { left: "Question paper generator", meta: "From a syllabus outline", status: "Concept" },
-      { left: "Lesson plan assistant", meta: "Weekly planning", status: "Concept" },
-    ],
+    ranked: {
+      title: "Most used tools",
+      rows: [
+        { label: "Extraction & answer mapping", pct: 0.86 },
+        { label: "Question paper generator", pct: 0.34 },
+        { label: "Lesson plan assistant", pct: 0.21 },
+        { label: "Rubric builder", pct: 0.09 },
+      ],
+    },
+    insights: {
+      title: "Insights for Teachers",
+      items: [
+        "Extraction and answer mapping is the only tool built in this version.",
+        "Most time saved comes from marking rather than planning.",
+        "Two tools have not been opened this term.",
+      ],
+    },
   },
 };
 
@@ -656,13 +766,186 @@ function Popover({
   );
 }
 
+const GRADE_BG: Record<string, string> = {
+  A: "bg-grade-a",
+  B: "bg-grade-b",
+  C: "bg-grade-c",
+  D: "bg-grade-d",
+};
+
+/**
+ * A half-circle meter for the section's headline figure.
+ *
+ * Drawn as one arc with a dash offset rather than a rotated wedge, so the
+ * rounded cap sits on the end of the value the way the design shows it, and
+ * the whole thing scales with the tile instead of needing pixel maths.
+ */
+function Gauge({ value, total, label }: { value: number; total: number; label: string }) {
+  const r = 62;
+  const cx = 90;
+  const cy = 88;
+  const arc = Math.PI * r;
+  const filled = total > 0 ? Math.min(1, Math.max(0, value / total)) : 0;
+  const path = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 180 104" className="w-full max-w-47" role="img"
+           aria-label={`${label}: ${value} of ${total}`}>
+        <path d={path} fill="none" stroke="rgb(255 255 255 / 0.14)"
+              strokeWidth="17" strokeLinecap="round" />
+        <path d={path} fill="none" stroke="var(--color-brand)" strokeWidth="17"
+              strokeLinecap="round"
+              strokeDasharray={`${arc * filled} ${arc}`} />
+        <text x={cx} y={cy - 12} textAnchor="middle"
+              className="fill-white text-[26px] font-bold">
+          {value}
+        </text>
+        <text x={cx} y={cy + 6} textAnchor="middle"
+              className="fill-white/60 text-[11px]">
+          / {total}
+        </text>
+      </svg>
+      <span className="pb-1 text-[11.5px] text-white/70">{label}</span>
+    </div>
+  );
+}
+
+function SectionDashboard({ dash }: { dash: Dash }) {
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className="space-y-3">
+        <div className="rounded-panel bg-white/60 p-3 backdrop-blur-xl">
+          <h3 className="pb-2.5 text-center text-[13px] font-bold">
+            {dash.summaryTitle}
+          </h3>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="rounded-2xl bg-ink px-3 pb-2 pt-3 text-white">
+              <p className="pb-1 text-center text-[12.5px] font-semibold">
+                {dash.gauge.label}
+              </p>
+              <Gauge {...dash.gauge} />
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {dash.stats.map((s) => (
+                <div key={s.label} className="rounded-2xl bg-white px-3 py-3">
+                  <div
+                    className={[
+                      "text-[19px] font-bold leading-tight",
+                      s.tone === "good"
+                        ? "text-good"
+                        : s.tone === "bad"
+                          ? "text-bad"
+                          : s.tone === "warn"
+                            ? "text-warn"
+                            : "text-ink",
+                    ].join(" ")}
+                  >
+                    {s.value}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-ink-soft">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {dash.segmentation && (
+          <div className="rounded-panel bg-white/60 p-3 backdrop-blur-xl">
+            <h3 className="pb-2.5 text-center text-[13px] font-bold">
+              {dash.segmentation.title}
+            </h3>
+            <div className="grid grid-cols-4 gap-2.5">
+              {dash.segmentation.bands.map((b) => (
+                <div
+                  key={b.grade}
+                  className={[
+                    "flex flex-col items-center justify-center rounded-2xl px-1 py-5 text-white",
+                    GRADE_BG[b.grade] ?? "bg-ink",
+                  ].join(" ")}
+                >
+                  {/* The letter and the count are always shown. Green-to-red is
+                      a weak scale for red-green colour blindness, so the band
+                      is never identified by its colour alone. */}
+                  {b.caption && (
+                    <span className="text-[10px] font-semibold opacity-90">
+                      {b.caption}
+                    </span>
+                  )}
+                  <span className="text-[26px] font-bold leading-none">{b.grade}</span>
+                  <span className="pt-2 text-[13px] font-semibold">{b.count}</span>
+                  <span className="text-[10.5px] opacity-90">Students</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {dash.ranked && (
+          <div className="rounded-panel bg-white/60 p-3.5 backdrop-blur-xl">
+            <div className="flex items-center justify-between pb-1">
+              <h3 className="text-[13px] font-bold">{dash.ranked.title}</h3>
+              <span className="rounded-full bg-brand-wash px-3 py-1 text-[11px] font-semibold text-brand">
+                View All
+              </span>
+            </div>
+            <ol className="space-y-2.5 pt-1.5">
+              {dash.ranked.rows.map((row, i) => (
+                <li key={row.label}>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[12.5px] text-ink-soft">{i + 1}.</span>
+                    <span className="min-w-0 flex-1 text-[12.5px] font-medium">
+                      {row.label}
+                    </span>
+                    <span className="text-[11.5px] font-semibold tabular-nums text-ink-soft">
+                      {Math.round(row.pct * 100)}%
+                    </span>
+                  </div>
+                  <div className="mt-1 h-0.5 w-full rounded bg-black/8">
+                    <div
+                      className="h-0.5 rounded bg-brand"
+                      style={{ width: `${Math.round(row.pct * 100)}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {dash.insights && (
+          <div className="rounded-panel bg-white/60 p-3.5 backdrop-blur-xl">
+            <div className="flex items-center justify-between pb-1">
+              <h3 className="text-[13px] font-bold">{dash.insights.title}</h3>
+              <span className="rounded-full bg-brand-wash px-3 py-1 text-[11px] font-semibold text-brand">
+                View All
+              </span>
+            </div>
+            <ol className="space-y-2 pt-1.5">
+              {dash.insights.items.map((item, i) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-[12.5px] text-ink-soft">{i + 1}.</span>
+                  <span className="text-[12.5px] leading-normal text-ink-soft">
+                    {item}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /**
  * What the other nav sections show.
  *
- * The brief scopes this build to the extraction flow, so Home, My Classroom,
- * Assignments, My Library and Settings have nothing behind them. A dead click
- * reads as unfinished, and a fake screen would be worse — so each says plainly
- * what it would hold and points back to the part that works.
+ * The brief scopes this build to the extraction flow, so these screens are
+ * sample data rather than anything wired up. They exist so the product reads
+ * as a whole, and each one says plainly that its numbers are invented.
  */
 function OutOfScope({
   section,
@@ -673,19 +956,18 @@ function OutOfScope({
 }) {
   const Icon = NAV.find((n) => n.key === section)?.Icon ?? Settings;
   const title = sectionTitle(section);
-
-  const demo = SECTION_DEMO[section];
+  const dash = SECTION_DEMO[section];
 
   return (
     <section className="flex-1 px-3 pb-6 sm:px-5">
       <div className="mx-auto w-full max-w-220">
-        <header className="flex flex-wrap items-center gap-3 pb-4 pt-1">
+        <header className="flex flex-wrap items-center gap-3 pb-3 pt-1">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-ink-soft backdrop-blur-xl">
             <Icon width={20} height={20} />
           </span>
           <div className="min-w-0">
             <h2 className="text-[17px] font-bold">{title}</h2>
-            <p className="text-[12.5px] leading-[1.55] text-ink-soft">
+            <p className="text-[12.5px] leading-normal text-ink-soft">
               {BLURB[section]}
             </p>
           </div>
@@ -700,49 +982,10 @@ function OutOfScope({
           </span>
         </header>
 
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-          {demo.stats.map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-panel bg-white/60 px-4 py-3.5 backdrop-blur-xl"
-            >
-              <div className="text-[22px] font-bold leading-tight">{value}</div>
-              <div className="mt-0.5 text-[11.5px] text-ink-soft">{label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 rounded-panel bg-white/60 p-3 backdrop-blur-xl">
-          <h3 className="px-1 pb-2 text-[13px] font-bold">{demo.listTitle}</h3>
-          <ul className="space-y-1.5">
-            {demo.rows.map((row) => (
-              <li
-                key={row.left}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-inset bg-chip px-3 py-2.5"
-              >
-                <span className="min-w-0 flex-1 text-[12.5px] font-medium">
-                  {row.left}
-                </span>
-                <span className="text-[11.5px] text-ink-soft">{row.meta}</span>
-                <span
-                  className={[
-                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    row.tone === "good"
-                      ? "bg-good-bg text-good"
-                      : row.tone === "warn"
-                        ? "bg-warn-bg text-warn"
-                        : "bg-black/5 text-ink-soft",
-                  ].join(" ")}
-                >
-                  {row.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <SectionDashboard dash={dash} />
 
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-panel bg-white/60 px-4 py-3.5 backdrop-blur-xl">
-          <p className="min-w-0 flex-1 text-[12px] leading-[1.55] text-ink-soft">
+          <p className="min-w-0 flex-1 text-[12px] leading-normal text-ink-soft">
             Head to <strong>Exams</strong> to upload a question paper and a
             student&apos;s answer sheet — it reads both, matches each answer to
             its question, highlights it on the page and marks it.
@@ -760,6 +1003,7 @@ function OutOfScope({
     </section>
   );
 }
+
 
 function IconButton({
   label,
