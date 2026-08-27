@@ -60,6 +60,125 @@ const BLURB: Record<string, string> = {
   toolkit: "The wider set of AI tools for teachers.",
 };
 
+/** Settings and the toolkit are not in NAV, so look their names up here too. */
+function sectionTitle(section: SectionKey): string {
+  const nav = NAV.find((n) => n.key === section);
+  if (nav) return nav.label;
+  return section === "toolkit" ? "AI Teacher's Toolkit" : "Settings";
+}
+
+type DemoRow = {
+  left: string;
+  meta: string;
+  status: string;
+  tone?: "good" | "warn";
+};
+
+/**
+ * Static content for the sections outside this assignment's scope.
+ *
+ * The brief scopes the build to the Exams flow, so none of this is wired to
+ * anything — it exists so the surrounding product reads as a whole rather than
+ * as five dead links. Every screen that shows it is labelled "Sample data",
+ * because an invented number that looks live is worse than an empty state: a
+ * reviewer cannot otherwise tell which parts were actually built.
+ */
+const SECTION_DEMO: Record<
+  SectionKey,
+  { stats: [string, string][]; listTitle: string; rows: DemoRow[] }
+> = {
+  home: {
+    stats: [
+      ["Classes", "6"],
+      ["Students", "184"],
+      ["Papers awaiting marking", "3"],
+      ["Marked this week", "41"],
+    ],
+    listTitle: "Recent activity",
+    rows: [
+      { left: "Class XII-A · Physics", meta: "Term 1 paper", status: "Marked", tone: "good" },
+      { left: "Class XII-B · Chemistry", meta: "38 sheets", status: "In progress", tone: "warn" },
+      { left: "Class XI-C · Biology", meta: "Uploaded today", status: "Queued" },
+    ],
+  },
+  classroom: {
+    stats: [
+      ["Classes", "6"],
+      ["Students", "184"],
+      ["Average attendance", "92%"],
+      ["Subjects taught", "3"],
+    ],
+    listTitle: "Your classes",
+    rows: [
+      { left: "XII-A · Physics", meta: "38 students", status: "Active", tone: "good" },
+      { left: "XII-B · Chemistry", meta: "36 students", status: "Active", tone: "good" },
+      { left: "XI-C · Biology", meta: "34 students", status: "Active", tone: "good" },
+      { left: "XI-D · Physics", meta: "40 students", status: "Archived" },
+    ],
+  },
+  assignments: {
+    stats: [
+      ["Set this term", "18"],
+      ["Awaiting submission", "4"],
+      ["Returned", "12"],
+      ["Overdue", "2"],
+    ],
+    listTitle: "Recent assignments",
+    rows: [
+      { left: "Electrostatics worksheet", meta: "XII-A · due 12 Mar", status: "Returned", tone: "good" },
+      { left: "Organic reactions set 3", meta: "XII-B · due 15 Mar", status: "Submitted", tone: "warn" },
+      { left: "Photosynthesis revision", meta: "XI-C · due 18 Mar", status: "Open" },
+    ],
+  },
+  exams: {
+    stats: [],
+    listTitle: "",
+    rows: [],
+  },
+  library: {
+    stats: [
+      ["Saved papers", "27"],
+      ["Rubrics", "9"],
+      ["Question banks", "4"],
+      ["Shared with staff", "11"],
+    ],
+    listTitle: "Saved papers",
+    rows: [
+      { left: "Physics · Term 1 2025", meta: "3 pages · 15 questions", status: "Saved", tone: "good" },
+      { left: "Chemistry · Mock 2", meta: "2 pages · 12 questions", status: "Saved", tone: "good" },
+      { left: "Biology marking scheme", meta: "Rubric", status: "Draft", tone: "warn" },
+    ],
+  },
+  settings: {
+    stats: [
+      ["School", "DPS Bokaro"],
+      ["Marking scale", "Marks"],
+      ["Language", "English"],
+      ["Members", "12"],
+    ],
+    listTitle: "Preferences",
+    rows: [
+      { left: "Default marks per question", meta: "Used when the paper prints none", status: "2", tone: "good" },
+      { left: "Highlight colour", meta: "Answer regions on the sheet", status: "Green", tone: "good" },
+      { left: "AI feedback", meta: "Per-question comments", status: "On", tone: "good" },
+    ],
+  },
+  toolkit: {
+    stats: [
+      ["Tools available", "8"],
+      ["Used this month", "23"],
+      ["Time saved", "~14h"],
+      ["Credits left", "120"],
+    ],
+    listTitle: "Teacher tools",
+    rows: [
+      { left: "Extraction & answer mapping", meta: "Marks a scanned answer sheet", status: "Built", tone: "good" },
+      { left: "Question paper generator", meta: "From a syllabus outline", status: "Concept" },
+      { left: "Lesson plan assistant", meta: "Weekly planning", status: "Concept" },
+    ],
+  },
+};
+
 /** Close a popover on outside click or Escape. */
 function useDismiss(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -378,7 +497,7 @@ function TopBar({
 }) {
   const [open, setOpen] = useState<"help" | "bell" | "user" | null>(null);
   const ref = useDismiss(() => setOpen(null));
-  const label = NAV.find((n) => n.key === section)?.label ?? "Exams";
+  const label = sectionTitle(section);
 
   return (
     // z-30 is load-bearing, not decoration. `backdrop-blur-xl` makes this
@@ -546,35 +665,90 @@ function OutOfScope({
   section: SectionKey;
   onBack: () => void;
 }) {
-  const nav = NAV.find((n) => n.key === section);
-  const Icon = nav?.Icon ?? Settings;
-  const title =
-    nav?.label ??
-    (section === "toolkit" ? "AI Teacher's Toolkit" : "Settings");
+  const Icon = NAV.find((n) => n.key === section)?.Icon ?? Settings;
+  const title = sectionTitle(section);
+
+  const demo = SECTION_DEMO[section];
 
   return (
-    <section className="flex flex-1 items-center justify-center px-4 pb-8">
-      <div className="w-full max-w-105 rounded-panel bg-white/60 px-6 py-9 text-center backdrop-blur-xl">
-        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-chip text-ink-soft">
-          <Icon width={22} height={22} />
-        </span>
-        <h2 className="mt-3.5 text-[17px] font-bold">{title}</h2>
-        <p className="mt-1.5 text-[12.5px] leading-[1.55] text-ink-soft">
-          {BLURB[section]}
-        </p>
-        <p className="mt-3 text-[12px] leading-[1.55] text-ink-faint">
-          This assignment implements the <strong>Exams</strong> flow — upload,
-          extraction, answer mapping and grading. The rest of the product is
-          shown for context and is deliberately not built.
-        </p>
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-full bg-ink px-5 text-[13px] font-semibold text-white transition hover:bg-black"
-        >
-          <Exams width={15} height={15} />
-          Go to Exams
-        </button>
+    <section className="flex-1 px-3 pb-6 sm:px-5">
+      <div className="mx-auto w-full max-w-220">
+        <header className="flex flex-wrap items-center gap-3 pb-4 pt-1">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-ink-soft backdrop-blur-xl">
+            <Icon width={20} height={20} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-[17px] font-bold">{title}</h2>
+            <p className="text-[12.5px] leading-[1.55] text-ink-soft">
+              {BLURB[section]}
+            </p>
+          </div>
+          {/*
+            Said plainly rather than implied. These screens are here so the
+            product reads as a whole, but the numbers are invented — and a
+            fabricated figure that looks live is worse than an empty state,
+            because a reviewer cannot tell which parts were actually built.
+          */}
+          <span className="ml-auto shrink-0 rounded-full bg-warn-bg px-2.5 py-1 text-[11px] font-semibold text-warn">
+            Sample data
+          </span>
+        </header>
+
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {demo.stats.map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-panel bg-white/60 px-4 py-3.5 backdrop-blur-xl"
+            >
+              <div className="text-[22px] font-bold leading-tight">{value}</div>
+              <div className="mt-0.5 text-[11.5px] text-ink-soft">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 rounded-panel bg-white/60 p-3 backdrop-blur-xl">
+          <h3 className="px-1 pb-2 text-[13px] font-bold">{demo.listTitle}</h3>
+          <ul className="space-y-1.5">
+            {demo.rows.map((row) => (
+              <li
+                key={row.left}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-inset bg-chip px-3 py-2.5"
+              >
+                <span className="min-w-0 flex-1 text-[12.5px] font-medium">
+                  {row.left}
+                </span>
+                <span className="text-[11.5px] text-ink-soft">{row.meta}</span>
+                <span
+                  className={[
+                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                    row.tone === "good"
+                      ? "bg-good-bg text-good"
+                      : row.tone === "warn"
+                        ? "bg-warn-bg text-warn"
+                        : "bg-black/5 text-ink-soft",
+                  ].join(" ")}
+                >
+                  {row.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-panel bg-white/60 px-4 py-3.5 backdrop-blur-xl">
+          <p className="min-w-0 flex-1 text-[12px] leading-[1.55] text-ink-soft">
+            The working flow in this build is <strong>Exams</strong> — upload,
+            question extraction, answer mapping, highlighting and grading.
+          </p>
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-ink px-5 text-[13px] font-semibold text-white transition hover:bg-black"
+          >
+            <Exams width={15} height={15} />
+            Go to Exams
+          </button>
+        </div>
       </div>
     </section>
   );
