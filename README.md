@@ -382,7 +382,7 @@ box in green. Run this against a real sheet before trusting anything else.
 ## Deploying
 
 **API → Render.** Point Render at this repo, choose Blueprint, and it reads
-`api/render.yaml`. Set `GEMINI_API_KEY` in the dashboard. Free instances sleep
+`render.yaml` at the repo root. Set `GEMINI_API_KEY` in the dashboard. Free instances sleep
 after ~15 minutes idle and take 30–60s to wake, so a cron-job.org ping to
 `/api/health` every 10 minutes keeps it warm — and the frontend shows an
 explicit "waking the server" state so a cold start reads as designed rather

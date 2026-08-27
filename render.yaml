@@ -1,6 +1,11 @@
 # Render blueprint. Point Render at the repo, pick "Blueprint", set
 # GEMINI_API_KEY in the dashboard, and it deploys from here.
 #
+# This file has to sit at the repository root: Render only looks for
+# render.yaml there, so a blueprint kept beside the code it deploys is a
+# blueprint Render silently never finds. `rootDir` below is what points it
+# at the api/ folder.
+#
 # Free instances sleep after ~15 minutes idle and take 30-60s to wake. The
 # frontend shows a "waking up" state for exactly this reason, and a
 # cron-job.org ping every 10 minutes to /api/health keeps it warm through the
