@@ -143,9 +143,14 @@ function Dropzone({
       className={[
         // The dashed frame stays put once a file is chosen — the chip drops
         // into it rather than replacing it.
-        "flex h-37.5 items-center justify-center rounded-2xl border border-dashed bg-white/45 px-4 transition sm:h-47.5",
-        over ? "border-brand bg-brand-wash/60" : "border-black/15",
-        file ? "" : "cursor-pointer hover:border-brand/50",
+        // 2px and brand-tinted rather than a hairline of grey: this is the one
+        // control on the screen the teacher has to find, and at 1px black/15
+        // it read as a divider rather than a target. The three states step up
+        // the same hue — resting, hover, drag-over — so the frame reacts
+        // without changing colour under the cursor.
+        "flex h-37.5 items-center justify-center rounded-2xl border-2 border-dashed bg-white/45 px-4 transition sm:h-47.5",
+        over ? "border-brand bg-brand-wash/60" : "border-brand/40",
+        file ? "" : "cursor-pointer hover:border-brand/70 hover:bg-brand-wash/30",
       ].join(" ")}
       onClick={file ? undefined : () => input.current?.click()}
     >
