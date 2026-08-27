@@ -31,7 +31,20 @@ def grade(questions: list[Question]) -> tuple[bool, str, list[str]]:
     answered = [q for q in questions if q.status == "answered" and q.answer]
 
     for question in questions:
-        if question.status != "answered":
+        if question.status == "not_chosen":
+            # The other branch of an internal choice. Marked out of zero, so
+            # it cannot drag the total down, and said plainly rather than
+            # sitting in the list as a blank the student is answerable for.
+            question.grade = Grade(
+                awarded=0.0,
+                max=0.0,
+                verdict="ungraded",
+                feedback=(
+                    "Not attempted — the student answered the alternative "
+                    "offered for this question."
+                ),
+            )
+        elif question.status != "answered":
             question.grade = Grade(
                 awarded=0.0,
                 max=question.marks or DEFAULT_MARKS,
@@ -196,10 +209,11 @@ def summarise(
     overall: str,
 ) -> Summary:
     answered = [q for q in questions if q.status == "answered"]
+    not_chosen = [q for q in questions if q.status == "not_chosen"]
     return Summary(
         total_questions=len(questions),
         answered=len(answered),
-        unanswered=len(questions) - len(answered),
+        unanswered=len(questions) - len(answered) - len(not_chosen),
         unmatched_answers=len(unmatched),
         marks_awarded=round(
             sum(q.grade.awarded for q in questions if q.grade), 2

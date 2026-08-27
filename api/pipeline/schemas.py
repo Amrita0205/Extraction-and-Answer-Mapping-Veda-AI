@@ -95,7 +95,16 @@ class Question(BaseModel):
     text: str
     marks: Optional[float] = None
     order: int  # printed order, 0-based
-    status: Literal["answered", "unanswered"] = "unanswered"
+    # "not_chosen" is the unselected half of an internal choice — a paper that
+    # prints "13. ... OR 13. ..." expects one of the two. It is deliberately
+    # not "unanswered": the student did nothing wrong by skipping it, it costs
+    # them no marks, and a teacher reading a list of blanks must not see it
+    # sitting among the questions that were genuinely left out.
+    status: Literal["answered", "unanswered", "not_chosen"] = "unanswered"
+    # Branches of one choice share a group key ("13"); `choice_branch` is 0 for
+    # the first printed alternative, 1 for the one after the OR.
+    choice_group: Optional[str] = None
+    choice_branch: int = 0
     answer: Optional[Answer] = None
     grade: Optional[Grade] = None
 

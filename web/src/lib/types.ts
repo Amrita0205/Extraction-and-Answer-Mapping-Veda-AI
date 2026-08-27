@@ -57,7 +57,7 @@ export interface Question {
   text: string;
   marks: number | null;
   order: number;
-  status: "answered" | "unanswered";
+  status: "answered" | "unanswered" | "not_chosen";
   answer: Answer | null;
   grade: Grade | null;
 }

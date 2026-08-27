@@ -17,9 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np  # noqa: E402
 from PIL import Image, ImageDraw  # noqa: E402
 
-from pipeline import gemini, labels, mapping  # noqa: E402
+from pipeline import gemini, grading, labels, mapping  # noqa: E402
 from pipeline.questions import _normalise  # noqa: E402
-from pipeline.schemas import AnswerBlock, Region  # noqa: E402
+from pipeline.schemas import AnswerBlock, Grade, Region  # noqa: E402
 from pipeline.tighten import tighten  # noqa: E402
 
 
@@ -86,6 +86,52 @@ def test_duplicate_label_keeps_the_fuller_text():
     )
     assert len(questions) == 1
     assert questions[0].text.endswith("through the heart")
+
+
+def test_near_duplicate_ocr_reread_still_merges():
+    """Two reads of the same question at a page boundary, worded slightly
+    differently by OCR/vision noise, must still collapse to one — the
+    internal-choice fix below must not turn ordinary re-reads into phantom
+    extra questions."""
+    questions = _normalise(
+        [
+            {"number": "6", "text": "Explain the process of photosynthesis in plants."},
+            {"number": "6", "text": "Explain the process of photosynthesis in green plants."},
+        ],
+        [],
+    )
+    assert len(questions) == 1
+
+
+def test_internal_choice_questions_are_not_merged_into_one():
+    """Papers often print an internal choice as two questions sharing one
+    number: "13 — Explain the OSI model" / "13 — OR — Explain the TCP/IP
+    model". Neither has a lettered sub-part, so they collide on the same key
+    as a plain duplicate — the dedup used to keep only the longer text and
+    silently drop the other branch entirely, which meant whichever branch a
+    student actually attempted could vanish before mapping ever saw it."""
+    questions = _normalise(
+        [
+            {"number": "12", "text": "Explain any two features of a computer network.", "marks": 3},
+            {"number": "13", "text": "Explain the seven layers of the OSI model with a diagram.", "marks": 5},
+            {"number": "13", "text": "OR: Explain the TCP/IP model and compare it with OSI.", "marks": 5},
+            {"number": "14", "text": "What is an IP address? Give one example.", "marks": 2},
+        ],
+        [],
+    )
+    assert len(questions) == 4, "both branches of the internal choice must survive"
+    thirteens = [q for q in questions if q.number == "13"]
+    assert len(thirteens) == 2
+    assert thirteens[0].id != thirteens[1].id, "branches need distinct ids to both be mappable"
+    assert {q.marks for q in thirteens} == {5}
+
+    # Distinguished by identity, never by inventing a sub-part. The brief
+    # requires the printed numbering to be preserved, and a paper that prints
+    # "13" twice does not print a "13(alt2)" — a synthetic part would reach
+    # the teacher as a sub-part pill the paper never had.
+    assert [q.part for q in thirteens] == [None, None], "no invented sub-parts"
+    assert {q.choice_group for q in thirteens} == {"13|"}
+    assert sorted(q.choice_branch for q in thirteens) == [0, 1]
 
 
 # --------------------------------------------------------------------------
@@ -277,6 +323,64 @@ def test_label_naming_a_question_not_on_the_paper_stays_unmatched():
     assert [b.id for b in unmatched] == ["a1"], "Q14 should be left unmatched"
     assert questions[1].status == "unanswered", "Q13 must not absorb it"
     assert any("does not contain" in w for w in warnings), "should say why"
+
+
+
+def test_internal_choice_picks_the_branch_the_student_answered():
+    """A student writing "13." cannot say *which* 13 they meant, so the branch
+    has to come from what they wrote. Defaulting to the first printed one marks
+    a correct TCP/IP answer against the OSI question, and reports the branch
+    they did answer as blank."""
+    questions = _normalise(
+        [
+            {"number": "12", "text": "Explain virtual memory using paging.", "marks": 5},
+            {"number": "13", "text": "What is the OSI reference model? List its seven layers.", "marks": 5},
+            {"number": "13", "text": "What is the TCP/IP model? Compare it with the OSI model.", "marks": 5},
+        ],
+        [],
+    )
+    blocks = [
+        _block("a1", "13.",
+               "The TCP/IP model has four layers: link, internet, transport and "
+               "application. Compared with OSI it merges session and presentation."),
+    ]
+    questions, unmatched, _ = mapping.map_answers(questions, blocks)
+    thirteens = [q for q in questions if q.number == "13"]
+
+    answered = [q for q in thirteens if q.status == "answered"]
+    assert len(answered) == 1
+    assert "TCP/IP" in answered[0].text, "must match the branch actually written"
+
+    skipped = [q for q in thirteens if q.status == "not_chosen"]
+    assert len(skipped) == 1, "the other branch is not_chosen, never unanswered"
+
+
+def test_unchosen_branch_is_excluded_from_the_marks_total():
+    """A paper out of 40 must not be reported out of 45. Only one branch of an
+    internal choice counts, so the branch the student was never meant to answer
+    contributes nothing to the denominator."""
+    questions = _normalise(
+        [
+            {"number": "12", "text": "Explain virtual memory using paging.", "marks": 5},
+            {"number": "13", "text": "What is the OSI reference model? List its seven layers.", "marks": 5},
+            {"number": "13", "text": "What is the TCP/IP model? Compare it with the OSI model.", "marks": 5},
+        ],
+        [],
+    )
+    blocks = [_block("a1", "13.", "The TCP/IP model has four layers, unlike OSI which has seven.")]
+    questions, unmatched, _ = mapping.map_answers(questions, blocks)
+
+    # Grade offline: only the not_chosen branch needs its marks zeroed, and
+    # that happens without an API call.
+    for q in questions:
+        if q.status == "not_chosen":
+            q.grade = Grade(awarded=0.0, max=0.0, verdict="ungraded")
+        else:
+            q.grade = Grade(awarded=0.0, max=q.marks or 2.0, verdict="ungraded")
+
+    summary = grading.summarise(questions, unmatched, True, "")
+    assert summary.marks_total == 10, f"expected 10, got {summary.marks_total}"
+    assert summary.unanswered == 1, "the unchosen branch is not an omission"
 
 
 def _run() -> int:

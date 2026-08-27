@@ -58,7 +58,11 @@ def map_answers(
     questions: list[Question], blocks: list[AnswerBlock]
 ) -> tuple[list[Question], list[AnswerBlock], list[str]]:
     warnings: list[str] = []
-    by_key = {labels.key(q.number, q.part): q for q in questions}
+    # A label can name more than one question: an internal choice prints
+    # "13 ... OR 13 ...", so both branches live under the key "13|".
+    by_key: dict[str, list[Question]] = defaultdict(list)
+    for q in questions:
+        by_key[labels.key(q.number, q.part)].append(q)
     taken: dict[str, AnswerBlock] = {}
 
     blocks = _merge_same_label(blocks)
@@ -87,7 +91,7 @@ def map_answers(
         if number is None:
             continue
 
-        question = _resolve(by_key, questions, number, part, taken)
+        question = _resolve(by_key, questions, number, part, taken, block.text)
         if question is None:
             continue
 
@@ -159,6 +163,7 @@ def map_answers(
                 _assign(block, question, taken, "sequential", 0.4)
 
     _attach(questions, taken)
+    _resolve_choices(questions, warnings)
     unmatched = [b for b in blocks if b.matched_question_id is None]
 
     if unmatched:
@@ -180,17 +185,30 @@ def map_answers(
 
 
 def _resolve(
-    by_key: dict[str, Question],
+    by_key: dict[str, list[Question]],
     questions: list[Question],
     number: str,
     part: str | None,
     taken: dict[str, AnswerBlock],
+    text: str = "",
 ) -> Question | None:
     """Find the question a parsed label refers to, tolerating a missing part."""
-    exact = by_key.get(labels.key(number, part))
-    if exact is not None and exact.id not in taken:
-        return exact
-    if exact is not None:
+    branches = [q for q in by_key.get(labels.key(number, part), [])]
+    free = [q for q in branches if q.id not in taken]
+
+    if len(free) == 1:
+        return free[0]
+    if len(free) > 1:
+        # An internal choice: the label says "13" but the paper printed two.
+        # Which one the student answered is only knowable from what they
+        # wrote, so pick the branch their words actually match. Writing "13"
+        # cannot disambiguate it, and defaulting to the first printed branch
+        # would mark a correct TCP/IP answer against the OSI question.
+        tokens = _tokens(text)
+        idf = _idf([q.text for q in free] + [text])
+        scored = sorted(free, key=lambda q: -_similarity(tokens, _tokens(q.text), idf))
+        return scored[0]
+    if branches:
         return None  # already answered; caller leaves the block unmatched
 
     if part is None:
@@ -316,6 +334,36 @@ def _adjudicate(
         if confidence < 0.35:
             continue
         _assign(block, question, taken, "semantic", round(min(0.9, confidence), 3))
+
+
+def _resolve_choices(questions: list[Question], warnings: list[str]) -> None:
+    """Mark the branches of an internal choice the student did not take.
+
+    A paper printing "13 ... OR 13 ..." expects one answer, not two, so the
+    branch left blank is not a question the student failed to attempt — it is
+    one they were never meant to answer. Reporting it as `unanswered` would
+    put it in the teacher's list of omissions and, worse, count its marks
+    against the total: the sample paper is out of 40, and summing both
+    branches of 13 reports 45.
+    """
+    groups: dict[str, list[Question]] = defaultdict(list)
+    for q in questions:
+        if q.choice_group:
+            groups[q.choice_group].append(q)
+
+    for group, branches in groups.items():
+        if not any(q.status == "answered" for q in branches):
+            continue  # neither attempted — both stay genuinely unanswered
+        skipped = [q for q in branches if q.status != "answered"]
+        for q in skipped:
+            q.status = "not_chosen"
+        if skipped:
+            number = skipped[0].number
+            warnings.append(
+                f"Question {number} offered a choice; the student answered one "
+                f"branch, so the other is not counted as unanswered and its "
+                f"marks are excluded from the total."
+            )
 
 
 def _attach(questions: list[Question], taken: dict[str, AnswerBlock]) -> None:

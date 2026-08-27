@@ -15,6 +15,7 @@ to a page or three, so the extra vision calls are cheap.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Callable
 
 from . import gemini, labels
@@ -122,9 +123,30 @@ def _unwrap(data) -> list[dict]:
     return []
 
 
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _looks_like_duplicate(a: str, b: str) -> bool:
+    """Same question re-read at a page boundary, or two different questions
+    that happen to share a printed number (an internal-choice pair)?
+
+    A cheap token-overlap ratio is enough to tell OCR/transcription noise on
+    one reading of the same sentence from two genuinely different question
+    statements — the former agrees on most words, the latter rarely shares
+    more than a stray "the" or "explain".
+    """
+    ta = set(_WORD.findall(a.lower()))
+    tb = set(_WORD.findall(b.lower()))
+    if not ta or not tb:
+        return True
+    overlap = len(ta & tb) / min(len(ta), len(tb))
+    return overlap > 0.6
+
+
 def _normalise(raw: list[dict], warnings: list[str]) -> list[Question]:
     seen: dict[str, Question] = {}
     order: list[str] = []
+    branches: dict[str, int] = {}   # label -> how many choice branches so far
 
     for item in raw:
         number = str(item.get("number") or "").strip()
@@ -154,21 +176,44 @@ def _normalise(raw: list[dict], warnings: list[str]) -> list[Question]:
 
         k = labels.key(number, part)
         if k in seen:
-            # Duplicate label — usually the same question caught twice at a
-            # page boundary. Keep the longer text, it is the more complete read.
-            if len(text) > len(seen[k].text):
-                seen[k].text = text
-            continue
+            if _looks_like_duplicate(text, seen[k].text):
+                # Duplicate label — usually the same question caught twice
+                # at a page boundary. Keep the longer text, it is the more
+                # complete read.
+                if len(text) > len(seen[k].text):
+                    seen[k].text = text
+                continue
+            # Same printed number (and sub-part, if any) but clearly
+            # different text — almost always an internal-choice pair, e.g.
+            # "13 — Explain the OSI model" / "13 — OR — Explain the TCP/IP
+            # model", which papers print under one shared number. Merging
+            # these away silently drops whichever branch the student actually
+            # attempted, so both are kept.
+            #
+            # They are separated by id and `choice_branch`, never by inventing
+            # a sub-part: the brief requires the printed numbering to be
+            # preserved, and a paper that prints "13" twice does not print a
+            # "13(alt2)". A synthetic part would reach the UI as a sub-part
+            # pill and be shown to the teacher as if the paper said it.
+            branch = branches[k] = branches.get(k, 0) + 1
+            seen[k].choice_group = k          # the first branch, retroactively
+            key = f"{k}#{branch}"
+        else:
+            branch = 0
+            key = k
 
-        seen[k] = Question(
-            id=f"q_{k.replace('|', '_').rstrip('_')}",
+        seen[key] = Question(
+            id=f"q_{k.replace('|', '_').rstrip('_')}"
+            + (f"_or{branch}" if branch else ""),
             number=number,
             part=part,
             text=text,
             marks=marks,
+            choice_group=k if branch else None,
+            choice_branch=branch,
             order=len(order),
         )
-        order.append(k)
+        order.append(key)
 
     questions = [seen[k] for k in order]
 

@@ -46,7 +46,12 @@ export function QuestionCard({
   onSelect: () => void;
   onToggle: () => void;
 }) {
-  const unanswered = question.status === "unanswered";
+  // The unselected half of an internal choice ("13 ... OR 13 ..."). It is
+  // greyed like a blank, because it has no answer — but it must never be
+  // *described* as one: the student was never meant to answer it, and it
+  // costs them nothing.
+  const notChosen = question.status === "not_chosen";
+  const unanswered = question.status === "unanswered" || notChosen;
   const grade = question.grade;
 
   return (
@@ -112,7 +117,13 @@ export function QuestionCard({
 
       {expanded && (
         <div className="animate-rise px-3.5 pb-3.5">
-          {unanswered ? (
+          {notChosen ? (
+            <div className="rounded-inset bg-chip px-3 py-2.5 text-[12px] text-ink-soft">
+              This question offered a choice, and the student answered the
+              alternative. It is not counted as unanswered and its marks are
+              excluded from the total.
+            </div>
+          ) : unanswered ? (
             <div className="rounded-inset bg-bad-bg/60 px-3 py-2.5 text-[12px] text-bad">
               No answer for this question was found anywhere on the answer sheet.
             </div>
