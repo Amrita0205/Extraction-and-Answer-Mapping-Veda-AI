@@ -5,8 +5,12 @@ question in printed order, reads the student's answers, works out which answer
 belongs to which question, highlights the exact region of the answer sheet, and
 marks the work.
 
-- **Live app:** _add the Vercel URL here_
-- **API:** _add the Render URL here_ · health check at `/api/health`
+- **Live app:** https://extraction-and-answer-mapping-veda-nine.vercel.app
+- **API:** https://extraction-and-answer-mapping-veda-ai.onrender.com · health check at [`/api/health`](https://extraction-and-answer-mapping-veda-ai.onrender.com/api/health)
+
+> The API runs on a free Render instance, which sleeps after ~15 minutes
+> idle. The first request after a quiet spell takes 30–60s to wake it; the
+> app shows a "waking the server" state while that happens.
 
 | | |
 |---|---|
@@ -16,6 +20,36 @@ marks the work.
 | Storage | In memory, per job — no database |
 
 ---
+
+## In one minute
+
+**What it does.** Upload a question paper and a handwritten answer sheet. Every
+question is extracted in printed order, every answer is read and matched to its
+question, the exact patch of paper is highlighted, and the work is marked.
+
+**How it works.** Four stages — render, extract questions, extract answers, map,
+grade. Mapping is a *ladder* rather than a similarity search: the number the
+student wrote, then a number inside the first words, then IDF-weighted content
+overlap, then model adjudication, then written order. The label rung is why
+answers written out of order still land: it is order-independent by
+construction. The model's bounding box is treated as a proposal and snapped onto
+the actual ink, which took highlight overlap from IoU 0.29 to 0.89.
+
+**Model.** Google Gemini 3.1 Flash Lite on the free tier, with `thinking_budget=0`
+on extraction — the same page takes 2.2s with it and 176s without. No
+fine-tuning, no RAG, no vector store; every call is stateless.
+
+**Measured, not asserted.** On a hand-written sheet with ground truth written
+before it was marked: **17/17 questions extracted, 15 answered, 1 blank, 2
+unmatched, out of 40** — every structural figure exact, on every run. On a
+synthetic case with known ink coordinates: extraction F1 **1.00**, mapping
+**6/6**, blanks **9/9**, highlight IoU **0.89**.
+
+**Where it is weakest.** Marking. Extraction and mapping are stable run to run;
+the total has come back 34, 35 and 35.5 out of an expected 35. Grading now runs
+at temperature 0, which narrows that but cannot close it. It is shown as an aid
+with per-question feedback, and it is where a teacher's override would earn its
+keep.
 
 ## How it works
 
@@ -284,7 +318,7 @@ right block before any AI is involved.
 Point it at the real API with `web/.env.local`:
 
 ```
-NEXT_PUBLIC_API_BASE=https://your-api.onrender.com
+NEXT_PUBLIC_API_BASE=https://extraction-and-answer-mapping-veda-ai.onrender.com
 ```
 
 ### Choosing a model
@@ -412,8 +446,20 @@ after ~15 minutes idle and take 30–60s to wake, so a cron-job.org ping to
 explicit "waking the server" state so a cold start reads as designed rather
 than broken.
 
-**Web → Vercel.** Root directory `web`, set `NEXT_PUBLIC_API_BASE` to the
-Render URL. Set `ALLOWED_ORIGINS` on the API to the Vercel URL once it exists.
+**Web → Vercel.** Root directory `web` — this is the setting to get right, as
+a build from the repo root fails with "No Next.js version detected". Set
+`NEXT_PUBLIC_API_BASE` to the Render URL **before the first build**: it is
+inlined at build time, so adding it afterwards needs a redeploy. With it
+unset the app silently serves `src/lib/mock.ts` instead of failing, which
+looks like it is working.
+
+`ALLOWED_ORIGINS` is `*`, so no CORS step is needed; narrow it to the Vercel
+origin if this ever holds real student work.
+
+**Two things that will bite.** Render defaults to a Python version with no
+`pydantic-core` wheel and then tries to compile Rust on a read-only image, so
+`.python-version` pins 3.12.6. And Vercel refuses to build a Next release
+with a published CVE, which is why `next` is on 15.5.24 rather than 15.5.4.
 
 ---
 
