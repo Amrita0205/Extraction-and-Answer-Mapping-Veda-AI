@@ -1,0 +1,206 @@
+{
+  "paper": {
+    "title": "Model Examination - Computer Science Fundamentals",
+    "max_marks": 40,
+    "expected_question_count": 17,
+    "note": "17 entries, not 14. Question 11 and 14 each split into two labelled sub-parts, and question 13 appears twice as an internal choice (OSI version and OR / TCP-IP version). Both branches of 13 must be extracted; only one is expected to be attempted."
+  },
+
+  "answer_sheet": {
+    "pages": 4,
+    "student_id": "TEST-001"
+  },
+
+  "questions": [
+    {
+      "id": "Q1", "number": "1", "sub_part": null, "section": "A", "max_marks": 1,
+      "text_starts": "Which data structure follows the First-In-First-Out (FIFO) order",
+      "answer_status": "answered",
+      "answer_page": 1, "answer_position_index": 1,
+      "expected_verdict": "correct", "expected_marks": 1
+    },
+    {
+      "id": "Q2", "number": "2", "sub_part": null, "section": "A", "max_marks": 1,
+      "text_starts": "Expand the abbreviation RAM",
+      "answer_status": "answered",
+      "answer_page": 1, "answer_position_index": 3,
+      "expected_verdict": "correct", "expected_marks": 1,
+      "edge_case": "out_of_order"
+    },
+    {
+      "id": "Q3", "number": "3", "sub_part": null, "section": "A", "max_marks": 1,
+      "text_starts": "State True or False: A primary key column can contain NULL values",
+      "answer_status": "answered",
+      "answer_page": 1, "answer_position_index": 2,
+      "expected_verdict": "correct", "expected_marks": 1,
+      "edge_case": "out_of_order"
+    },
+    {
+      "id": "Q4", "number": "4", "sub_part": null, "section": "A", "max_marks": 1,
+      "text_starts": "Expand the abbreviation HTTP",
+      "answer_status": "answered",
+      "answer_page": 4, "answer_position_index": 15,
+      "expected_verdict": "correct", "expected_marks": 1,
+      "edge_case": "out_of_order_far",
+      "note": "Answered on the last page, three sheets after its printed position. The hardest ordering case in the set."
+    },
+    {
+      "id": "Q5", "number": "5", "sub_part": null, "section": "A", "max_marks": 1,
+      "text_starts": "Which of the following sorting algorithms has O(n log n) worst-case",
+      "answer_status": "answered",
+      "answer_page": 1, "answer_position_index": 4,
+      "expected_verdict": "incorrect", "expected_marks": 0,
+      "correct_answer": "(c) Merge Sort",
+      "student_answer": "(b) Quick Sort",
+      "edge_case": "wrong_answer"
+    },
+    {
+      "id": "Q6", "number": "6", "sub_part": null, "section": "B", "max_marks": 3,
+      "text_starts": "Define time complexity",
+      "answer_status": "answered",
+      "answer_page": 1, "answer_position_index": 5,
+      "expected_verdict": "correct", "expected_marks": 3
+    },
+    {
+      "id": "Q7", "number": "7", "sub_part": null, "section": "B", "max_marks": 3,
+      "text_starts": "Differentiate between a compiler and an interpreter",
+      "answer_status": "not_attempted",
+      "answer_page": null, "answer_position_index": null,
+      "expected_verdict": "unanswered", "expected_marks": 0,
+      "edge_case": "unanswered",
+      "note": "Must be surfaced as blank, never mapped to a nearby answer."
+    },
+    {
+      "id": "Q8", "number": "8", "sub_part": null, "section": "B", "max_marks": 3,
+      "text_starts": "What is normalization in a database",
+      "answer_status": "answered",
+      "answer_page": 1, "answer_position_index": 6,
+      "expected_verdict": "correct", "expected_marks": 3
+    },
+    {
+      "id": "Q9", "number": "9", "sub_part": null, "section": "B", "max_marks": 3,
+      "text_starts": "Differentiate between TCP and UDP",
+      "answer_status": "answered",
+      "answer_page": 2, "answer_position_index": 8,
+      "expected_verdict": "correct", "expected_marks": 3,
+      "edge_case": "out_of_order"
+    },
+    {
+      "id": "Q10", "number": "10", "sub_part": null, "section": "B", "max_marks": 3,
+      "text_starts": "What is a deadlock",
+      "answer_status": "answered",
+      "answer_page": 2, "answer_position_index": 7,
+      "expected_verdict": "partially_correct", "expected_marks": 2,
+      "edge_case": "partial_credit",
+      "note": "Two necessary conditions were asked for, one was given. A grader that returns only correct/incorrect fails this case."
+    },
+    {
+      "id": "Q11a", "number": "11", "sub_part": "a", "section": "C", "max_marks": 2,
+      "text_starts": "Explain the working of a hash table",
+      "answer_status": "answered",
+      "answer_page": 2, "answer_position_index": 9,
+      "expected_verdict": "correct", "expected_marks": 2,
+      "edge_case": "sub_part"
+    },
+    {
+      "id": "Q11b", "number": "11", "sub_part": "b", "section": "C", "max_marks": 3,
+      "text_starts": "What is a collision",
+      "answer_status": "answered",
+      "answer_page": 2, "answer_position_index": 10,
+      "expected_verdict": "correct", "expected_marks": 3,
+      "edge_case": "sub_part"
+    },
+    {
+      "id": "Q12", "number": "12", "sub_part": null, "section": "C", "max_marks": 5,
+      "text_starts": "Explain the concept of virtual memory using paging",
+      "answer_status": "answered",
+      "answer_page": [3, 4], "answer_position_index": 11,
+      "expected_verdict": "correct", "expected_marks": 5,
+      "edge_case": "spans_pages",
+      "note": "Starts on sheet 3 mid-sentence and continues at the very top of sheet 4 with no question label. Highlighting must cover a region on both pages."
+    },
+    {
+      "id": "Q13_osi", "number": "13", "sub_part": null, "section": "C", "max_marks": 5,
+      "text_starts": "What is the OSI reference model",
+      "choice_group": "13", "choice_branch": "primary",
+      "answer_status": "not_chosen",
+      "answer_page": null, "answer_position_index": null,
+      "expected_verdict": "not_applicable", "expected_marks": 0,
+      "edge_case": "internal_choice",
+      "note": "Must be reported as the unselected branch of an OR pair, distinct from a genuinely unanswered question like Q7. It should NOT be counted as a loss of 5 marks."
+    },
+    {
+      "id": "Q13_tcpip", "number": "13", "sub_part": null, "section": "C", "max_marks": 5,
+      "text_starts": "What is the TCP/IP model",
+      "choice_group": "13", "choice_branch": "or",
+      "answer_status": "answered",
+      "answer_page": 4, "answer_position_index": 12,
+      "expected_verdict": "correct", "expected_marks": 5,
+      "edge_case": "internal_choice"
+    },
+    {
+      "id": "Q14a", "number": "14", "sub_part": "a", "section": "C", "max_marks": 2,
+      "text_starts": "Define recursion and give one example",
+      "answer_status": "answered",
+      "answer_page": 4, "answer_position_index": 14,
+      "expected_verdict": "correct", "expected_marks": 2,
+      "edge_case": "sub_part_out_of_order"
+    },
+    {
+      "id": "Q14b", "number": "14", "sub_part": "b", "section": "C", "max_marks": 3,
+      "text_starts": "Convert the decimal number 45 into its binary equivalent",
+      "answer_status": "answered",
+      "answer_page": 4, "answer_position_index": 13,
+      "expected_verdict": "correct", "expected_marks": 3,
+      "edge_case": "sub_part_out_of_order"
+    }
+  ],
+
+  "unmatched_blocks": [
+    {
+      "label_written": "Q15",
+      "page": 4, "position_index": 16,
+      "content_starts": "Big Data refers to data sets",
+      "expected_handling": "report_as_unmatched",
+      "note": "There is no question 15 on the paper. Silently dropping this, or forcing it onto Q14, are both failures."
+    },
+    {
+      "label_written": "Rough Work",
+      "page": 4, "position_index": 17,
+      "content_starts": "101101",
+      "expected_handling": "report_as_unmatched_or_low_confidence_Q14b",
+      "note": "Genuinely ambiguous. Either behaviour is defensible as long as the confidence is exposed rather than hidden."
+    }
+  ],
+
+  "expected_grading_summary": {
+    "attempted": 15,
+    "unanswered": 1,
+    "not_chosen_due_to_internal_choice": 1,
+    "unmatched_answer_blocks": 2,
+    "marks_awarded": 35,
+    "marks_possible": 40,
+    "breakdown": {
+      "Q1": 1, "Q2": 1, "Q3": 1, "Q4": 1, "Q5": 0,
+      "Q6": 3, "Q7": 0, "Q8": 3, "Q9": 3, "Q10": 2,
+      "Q11a": 2, "Q11b": 3, "Q12": 5,
+      "Q13_osi": null, "Q13_tcpip": 5,
+      "Q14a": 2, "Q14b": 3
+    },
+    "note": "Marks possible is 40 because only one branch of question 13 counts. A pipeline that sums every extracted question will report 45 and is wrong."
+  },
+
+  "edge_case_checklist": [
+    "17 questions extracted, in printed order",
+    "11(a), 11(b), 14(a), 14(b) are four separate entries",
+    "Both branches of Q13 extracted, only one marked attempted",
+    "Q7 reported blank",
+    "Q2, Q3, Q9, Q4, Q14(a)/(b) mapped correctly despite non-sequential writing",
+    "Q12 highlight spans sheet 3 and sheet 4",
+    "Q15 block surfaced as unmatched",
+    "Rough Work block handled explicitly",
+    "Q5 marked incorrect",
+    "Q10 given partial marks",
+    "Total reported as 35 of 40"
+  ]
+}
