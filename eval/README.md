@@ -7,7 +7,7 @@ that move when a prompt or a threshold changes.
 
 ```bash
 python eval/run_eval.py                 # every case
-python eval/run_eval.py --case sheet-1  # one case
+python eval/run_eval.py --case synthetic # one case
 python eval/run_eval.py --rescore       # re-score cached runs, no API calls
 ```
 
@@ -39,9 +39,9 @@ for your first sheet, five for each after.
 
 ```jsonc
 {
-  "name": "sheet-1",
+  "name": "my-sheet",
   "question_paper": "fixtures/question_paper.pdf",
-  "answer_sheet":  "fixtures/sheet-1.pdf",
+  "answer_sheet":  "fixtures/my-sheet.pdf",
 
   // Every label the paper prints, in printed order.
   "questions": ["1", "2", "3", "11(a)", "11(b)"],

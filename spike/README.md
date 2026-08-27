@@ -2,6 +2,11 @@
 
 Two kinds of sample data are useful here, and they test different things.
 
+> **Both now exist in the repo.** `dataset/` holds a hand-written sheet with
+> ground truth, covering the edge cases below; `datasets/` holds 14 subjects of
+> real CBSE handwriting. This page records where they came from and how to make
+> more.
+
 ## 1. Real handwriting — tests accuracy
 
 CBSE publishes **scanned answer sheets written by actual candidates**, free and
@@ -69,7 +74,7 @@ margin and no band of blank paper underneath.
 Full pipeline:
 
 ```bash
-cd api && uvicorn main:app --reload --port 8000
+cd api && uvicorn main:app --reload --port 8001
 # then upload both files at http://localhost:3000
 ```
 
