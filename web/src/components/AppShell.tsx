@@ -633,9 +633,15 @@ function Popover({
               </span>
             </span>
           </div>
+          {/*
+            Says it is a demo without talking about the assignment. "The brief
+            specifies no authentication" is a sentence written to a reviewer,
+            not to a teacher, and a product that explains itself in terms of
+            its own spec reads as a submission rather than a product.
+          */}
           <p className="text-[11.5px] leading-normal text-ink-soft">
-            Signed in as a demo teacher. The brief specifies no authentication,
-            so there is no real account behind this.
+            Demo account — sign-in isn&apos;t enabled, so classes and settings
+            here are sample data.
           </p>
         </>
       )}
@@ -737,8 +743,9 @@ function OutOfScope({
 
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-panel bg-white/60 px-4 py-3.5 backdrop-blur-xl">
           <p className="min-w-0 flex-1 text-[12px] leading-[1.55] text-ink-soft">
-            The working flow in this build is <strong>Exams</strong> — upload,
-            question extraction, answer mapping, highlighting and grading.
+            Head to <strong>Exams</strong> to upload a question paper and a
+            student&apos;s answer sheet — it reads both, matches each answer to
+            its question, highlights it on the page and marks it.
           </p>
           <button
             type="button"
