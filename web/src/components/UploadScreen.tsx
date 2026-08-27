@@ -31,7 +31,7 @@ export function UploadScreen({
 
   return (
     <section className="flex flex-1 items-center justify-center px-3 pb-6 sm:px-6">
-      <div className="w-full max-w-[880px] text-center">
+      <div className="w-full max-w-220 text-center">
         <Heading />
         <p className="mt-2.5 text-[14px] text-ink-soft">
           Upload both files to get started
@@ -46,7 +46,7 @@ export function UploadScreen({
             alt=""
             width={600}
             height={600}
-            className="h-[132px] w-[132px] select-none sm:h-[156px] sm:w-[156px]"
+            className="h-33 w-33 select-none sm:h-39 sm:w-39"
             draggable={false}
           />
         </div>
@@ -104,10 +104,10 @@ function Heading() {
     <h1 className="text-[26px] font-bold leading-[1.2] tracking-[-0.01em] sm:text-[38px]">
       Upload{" "}
       <span className="relative inline-block sm:px-2 sm:text-brand">
-        <span className="absolute inset-x-0 -inset-y-0.5 -z-10 hidden rounded-[6px] bg-brand-wash sm:block" />
+        <span className="absolute inset-x-0 -inset-y-0.5 -z-10 hidden rounded-md bg-brand-wash sm:block" />
         <span className="relative">
           Q
-          <span className="absolute -bottom-0.5 left-0 h-[2px] w-full rounded bg-current" />
+          <span className="absolute -bottom-0.5 left-0 h-0.5 w-full rounded bg-current" />
         </span>
         uestion Paper &amp; Answer Sheets
       </span>
@@ -143,14 +143,14 @@ function Dropzone({
       className={[
         // The dashed frame stays put once a file is chosen — the chip drops
         // into it rather than replacing it.
-        "flex h-[150px] items-center justify-center rounded-2xl border border-dashed bg-white/45 px-4 transition sm:h-[190px]",
+        "flex h-37.5 items-center justify-center rounded-2xl border border-dashed bg-white/45 px-4 transition sm:h-47.5",
         over ? "border-brand bg-brand-wash/60" : "border-black/15",
         file ? "" : "cursor-pointer hover:border-brand/50",
       ].join(" ")}
       onClick={file ? undefined : () => input.current?.click()}
     >
       {file ? (
-        <div className="relative flex w-full max-w-[330px] items-center gap-3 rounded-[12px] bg-chip px-3.5 py-3">
+        <div className="relative flex w-full max-w-82.5 items-center gap-3 rounded-xl bg-chip px-3.5 py-3">
           <PdfBadge />
           <span className="min-w-0 flex-1 text-left">
             <span className="block truncate text-[14px] font-semibold">
@@ -176,7 +176,7 @@ function Dropzone({
         </div>
       ) : (
         <span className="flex flex-col items-center gap-2">
-          <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-chip text-ink-soft">
+          <span className="grid h-10 w-10 place-items-center rounded-inset bg-chip text-ink-soft">
             <UploadCloud width={18} height={18} />
           </span>
           <span className="text-[15px] font-semibold">

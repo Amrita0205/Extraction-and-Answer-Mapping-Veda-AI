@@ -88,7 +88,7 @@ export function AnswerSheet({
             >
               <Minus width={13} height={13} />
             </button>
-            <span className="min-w-[42px] text-center text-[11.5px] tabular-nums">
+            <span className="min-w-10.5 text-center text-[11.5px] tabular-nums">
               {zoom}%
             </span>
             <button
@@ -130,7 +130,7 @@ export function AnswerSheet({
       <div
         ref={scroller}
         onScroll={onScroll}
-        className="no-scrollbar min-h-0 flex-1 overflow-auto bg-[#fafafa] px-3 py-3"
+        className="no-scrollbar min-h-0 flex-1 overflow-auto bg-sheet px-3 py-3"
       >
         <div
           className="mx-auto space-y-4"
@@ -196,7 +196,7 @@ function Highlight({
   return (
     <div
       ref={innerRef}
-      className="pointer-events-none absolute animate-rise rounded-[6px] border-2 border-highlight-line bg-highlight-fill shadow-[0_0_0_1.5px_#fff]"
+      className="pointer-events-none absolute animate-rise rounded-md border-2 border-highlight-line bg-highlight-fill shadow-[0_0_0_1.5px_#fff]"
       style={{
         left: `${region.x0 * 100}%`,
         top: `${region.y0 * 100}%`,
@@ -205,7 +205,7 @@ function Highlight({
       }}
     >
       {showTag && label && (
-        <span className="absolute -top-[9px] left-0 rounded-[4px] bg-highlight-tag px-1.5 py-[1px] text-[9.5px] font-bold leading-[14px] text-white">
+        <span className="absolute -top-2.25 left-0 rounded-sm bg-highlight-tag px-1.5 py-px text-[9.5px] font-bold leading-3.5 text-white">
           {label}
         </span>
       )}

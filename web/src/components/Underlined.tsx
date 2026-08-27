@@ -10,7 +10,7 @@ export function Underlined({ children }: { children: string }) {
     <>
       <span className="relative">
         {first}
-        <span className="absolute -bottom-0.5 left-0 h-[1.5px] w-full rounded bg-current" />
+        <span className="absolute -bottom-0.5 left-0 h-0.375 w-full rounded bg-current" />
       </span>
       {rest.join("")}
     </>

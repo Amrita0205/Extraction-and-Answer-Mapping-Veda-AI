@@ -24,7 +24,7 @@ export function ScorePill({
 
   return (
     <span
-      className={`shrink-0 rounded-full px-2.5 py-[3px] text-[11.5px] font-semibold tabular-nums ${tone} ${className}`}
+      className={`shrink-0 rounded-full px-2.5 py-0.75 text-[11.5px] font-semibold tabular-nums ${tone} ${className}`}
     >
       {trim(awarded)} / {trim(max)}
     </span>
@@ -72,7 +72,7 @@ export function QuestionCard({
             {question.number}
           </span>
           {question.part && (
-            <span className="rounded-md bg-chip px-1.5 py-[3px] text-[11px] font-semibold text-ink-soft">
+            <span className="rounded-md bg-chip px-1.5 py-0.75 text-[11px] font-semibold text-ink-soft">
               {question.part}.
             </span>
           )}
@@ -113,12 +113,12 @@ export function QuestionCard({
       {expanded && (
         <div className="animate-rise px-3.5 pb-3.5">
           {unanswered ? (
-            <div className="rounded-[10px] bg-bad-bg/60 px-3 py-2.5 text-[12px] text-bad">
+            <div className="rounded-inset bg-bad-bg/60 px-3 py-2.5 text-[12px] text-bad">
               No answer for this question was found anywhere on the answer sheet.
             </div>
           ) : (
             <div className="space-y-2.5">
-              <div className="rounded-[10px] bg-chip px-3 py-2.5">
+              <div className="rounded-inset bg-chip px-3 py-2.5">
                 <p className="mb-1 text-[11px] font-bold">
                   Student&apos;s answer
                 </p>
@@ -128,7 +128,7 @@ export function QuestionCard({
               </div>
 
               {grade?.feedback && (
-                <div className="rounded-[10px] bg-chip px-3 py-2.5">
+                <div className="rounded-inset bg-chip px-3 py-2.5">
                   <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold">
                     <Sparkle width={12} height={12} className="text-brand" />
                     AI Feedback
@@ -239,7 +239,7 @@ export function OrphanCard({
 
       {expanded && (
         <div className="animate-rise px-3.5 pb-3.5">
-          <div className="rounded-[10px] bg-chip px-3 py-2.5">
+          <div className="rounded-inset bg-chip px-3 py-2.5">
             <p className="mb-1 text-[11px] font-bold">What the student wrote</p>
             <p className="text-[12px] leading-normal text-ink-soft">
               {answer.text || "—"}

@@ -57,7 +57,7 @@ export function LoadingScreen({
         {/* Not in the design, but the brief asks for processing progress and a
             six-page sheet is a long wait without it. Kept deliberately quiet
             so the composition above it reads as designed. */}
-        <div className="mt-7 h-[3px] w-48 overflow-hidden rounded-full bg-black/8">
+        <div className="mt-7 h-0.75 w-48 overflow-hidden rounded-full bg-black/8">
           <div
             className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out"
             style={{ width: `${Math.max(4, Math.round(progress * 100))}%` }}

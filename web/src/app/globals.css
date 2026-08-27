@@ -23,6 +23,9 @@
   /* Page background gradient */
   --color-page-from: #eeeeee;
   --color-page-to: #dadada;
+  /* The tray the scanned pages sit on — a shade off white so the paper itself
+     reads as the lighter surface. */
+  --color-sheet: #fafafa;
 
   /* Score pills — full marks, partial, zero */
   --color-good: #34ac15;
@@ -39,6 +42,10 @@
 
   --radius-panel: 20px;
   --radius-card: 14px;
+  /* The third tier: a block set into a card — the transcript, the feedback,
+     the "no answer found" note. Used in five places, so it is a token rather
+     than 10px written out five times. */
+  --radius-inset: 10px;
 }
 
 html,
