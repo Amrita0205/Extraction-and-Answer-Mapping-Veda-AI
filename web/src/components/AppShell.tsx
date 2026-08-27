@@ -486,10 +486,20 @@ function Sidebar({
         className,
       ].join(" ")}
     >
+      {/*
+        The toggle is rendered in both states, not just the expanded one.
+        Hiding it once collapsed made collapsing a one-way door: the rail has
+        no other control, so the only way back was a reload — and the width is
+        remembered while the app is open, so a reload did not always undo it
+        either. Collapsed, it stacks under the logo, which is the only spare
+        room a 64px rail has.
+      */}
       <div
         className={[
-          "flex items-center",
-          collapsed ? "justify-center" : "justify-between px-1",
+          "flex",
+          collapsed
+            ? "flex-col items-center gap-1.5"
+            : "items-center justify-between px-1",
         ].join(" ")}
       >
         <button
@@ -503,16 +513,15 @@ function Sidebar({
             <span className="text-[15px] font-bold tracking-tight">VedaAI</span>
           )}
         </button>
-        {!collapsed && (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Collapse sidebar"
-            className="rounded-md p-1 text-ink-faint transition hover:bg-chip hover:text-ink"
-          >
-            <PanelToggle />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="rounded-md p-1 text-ink-faint transition hover:bg-chip hover:text-ink"
+        >
+          <PanelToggle />
+        </button>
       </div>
 
       <button
@@ -1052,7 +1061,7 @@ function HomeScreen({ onOpen }: { onOpen: (key: SectionKey) => void }) {
                   // the icon straddling the seam between the two. The plate is
                   // what the product's artwork sits in; without it the cards
                   // read as flat tiles.
-                  "group relative rounded-panel bg-black/[0.045] pt-12 text-left transition",
+                  "group relative rounded-panel bg-black/4.5 pt-12 text-left transition",
                   open ? "cursor-pointer hover:-translate-y-0.5" : "cursor-default",
                 ].join(" ")}
               >
