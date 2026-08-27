@@ -37,6 +37,16 @@ log = logging.getLogger(__name__)
 SEMANTIC_FLOOR = 0.13  # below this, "matched" is indistinguishable from noise
 ADJUDICATE_LIMIT = 12  # cap the extra request so a messy sheet stays cheap
 
+# A label-matched answer whose words have essentially nothing to do with the
+# question it was filed under, when some *unanswered* question matches it
+# strongly, is a misread digit rather than a student writing nonsense. The
+# gap has to be stark before we overrule what the student appears to have
+# written: a correct short answer can legitimately share no words with its
+# question ("Expand RAM." / "Random Access Memory"), so a low score on its
+# own proves nothing — only a low score *beside* a strong rival does.
+REPAIR_HERE_MAX = 0.05
+REPAIR_RIVAL_MIN = 0.25
+
 _STOP = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "how",
     "in", "is", "it", "its", "of", "on", "or", "that", "the", "to", "was",
@@ -107,6 +117,8 @@ def map_answers(
             _assign(block, question, taken, "inherited", 0.82)
         else:
             _assign(block, question, taken, method, 0.97)
+
+    _repair_misread_labels(questions, taken, blocks)
 
     # --- 3: content similarity for whatever is left. ----------------------
     free_blocks = [
@@ -184,6 +196,69 @@ def map_answers(
     return questions, unmatched, warnings
 
 
+
+def _repair_misread_labels(
+    questions: list[Question],
+    taken: dict[str, AnswerBlock],
+    blocks: list[AnswerBlock],
+) -> None:
+    """Move an answer whose label points somewhere its words plainly do not.
+
+    The label rung trusts the number the student wrote, which is right almost
+    always — but the number is read off handwriting, and a misread digit files
+    a correct answer under the wrong question *and* reports the right one as
+    blank. On the sample sheet a "8" read as "7" put the normalization answer
+    on "compiler vs interpreter" and left normalization looking unattempted:
+    two questions wrong from one character.
+
+    So a label match is overruled only when the evidence is one-sided: the
+    answer shares essentially nothing with the question it landed on, and
+    shares a lot with one that is still unanswered.
+    """
+    free = [q for q in questions if q.id not in taken]
+    if not free:
+        return
+
+    corpus = [q.text for q in questions] + [b.text for b in blocks]
+    idf = _idf(corpus)
+
+    for question in list(questions):
+        block = taken.get(question.id)
+        if block is None or block.match_method not in ("label", "inherited"):
+            continue
+
+        tokens = _tokens(block.text)
+        here = _similarity(tokens, _tokens(question.text), idf)
+        if here > REPAIR_HERE_MAX:
+            continue
+
+        rival, best = None, 0.0
+        for candidate in free:
+            if candidate.id in taken:
+                continue
+            score = _similarity(tokens, _tokens(candidate.text), idf)
+            if score > best:
+                rival, best = candidate, score
+
+        if rival is None or best < REPAIR_RIVAL_MIN:
+            continue
+
+        log.info(
+            "repairing %s -> %s (label match scored %.3f, %s scores %.3f)",
+            labels.display(question.number, question.part),
+            labels.display(rival.number, rival.part),
+            here,
+            labels.display(rival.number, rival.part),
+            best,
+        )
+        del taken[question.id]
+        block.matched_question_id = None
+        # Confidence drops: the number the student wrote said otherwise, and we
+        # are trusting the words over their own label.
+        _assign(block, rival, taken, "semantic", round(min(0.8, best), 3))
+        free = [q for q in questions if q.id not in taken]
+
+
 def _resolve(
     by_key: dict[str, list[Question]],
     questions: list[Question],
@@ -201,13 +276,13 @@ def _resolve(
     if len(free) > 1:
         # An internal choice: the label says "13" but the paper printed two.
         # Which one the student answered is only knowable from what they
-        # wrote, so pick the branch their words actually match. Writing "13"
-        # cannot disambiguate it, and defaulting to the first printed branch
-        # would mark a correct TCP/IP answer against the OSI question.
-        tokens = _tokens(text)
-        idf = _idf([q.text for q in free] + [text])
-        scored = sorted(free, key=lambda q: -_similarity(tokens, _tokens(q.text), idf))
-        return scored[0]
+        # wrote, and word overlap is the wrong instrument for it — an answer
+        # that compares itself to the other branch borrows that branch's
+        # vocabulary. On the sample paper the TCP/IP answer says "four layers
+        # instead of seven", so "layers" and "seven" pushed it onto the OSI
+        # question by 0.25 to 0.22. Which question an answer *answers* is a
+        # judgement, so it is asked as one, with overlap kept as the fallback.
+        return _pick_branch(text, free)
     if branches:
         return None  # already answered; caller leaves the block unmatched
 
@@ -221,6 +296,43 @@ def _resolve(
         if siblings:
             return sorted(siblings, key=lambda q: labels.sort_key(q.number, q.part))[0]
     return None
+
+
+
+def _pick_branch(text: str, branches: list[Question]) -> Question | None:
+    """Choose which alternative of an internal choice an answer addresses.
+
+    One request, and only when a paper actually prints a choice and a student
+    actually answers it — so on a paper with no "OR" this never runs.
+    """
+    payload = [
+        {"index": i, "question": q.text}
+        for i, q in enumerate(branches)
+    ]
+    prompt = (
+        "An exam offered a choice: the questions below are alternatives "
+        "printed under the same number, and the student answered exactly one "
+        "of them.\n"
+        "Decide which one this answer is an answer TO. Judge what the answer "
+        "sets out to explain, not which words it happens to share — an answer "
+        "may mention the other alternative in order to compare itself against "
+        "it, and that is not the question it is answering.\n"
+        'Return JSON: {"index": integer}\n\n'
+        f"ANSWER:\n{text[:1500]}\n\nALTERNATIVES:\n"
+        + json.dumps(payload, ensure_ascii=False)
+    )
+    try:
+        data = gemini.generate_json(prompt, temperature=0.0)
+        index = int(data.get("index")) if isinstance(data, dict) else -1
+        if 0 <= index < len(branches):
+            log.info("choice branch %s picked by adjudication", index)
+            return branches[index]
+    except Exception as exc:  # noqa: BLE001 - never fatal, fall back below
+        log.warning("branch adjudication failed, falling back to overlap: %s", exc)
+
+    tokens = _tokens(text)
+    idf = _idf([q.text for q in branches] + [text])
+    return max(branches, key=lambda q: _similarity(tokens, _tokens(q.text), idf))
 
 
 def _assign(
