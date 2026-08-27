@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
   Assignments,
   Bell,
   Chevron,
@@ -14,6 +15,7 @@ import {
   Logo,
   Menu,
   PanelToggle,
+  PdfBadge,
   School,
   Settings,
   Sparkle,
@@ -374,6 +376,8 @@ export function AppShell({
         <main ref={mainRef} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
           {section === "exams" ? (
             children
+          ) : section === "home" ? (
+            <HomeScreen onOpen={go} />
           ) : (
             <OutOfScope section={section} onBack={() => go("exams")} />
           )}
@@ -937,6 +941,148 @@ function SectionDashboard({ dash }: { dash: Dash }) {
         )}
       </div>
     </div>
+  );
+}
+
+
+/**
+ * The tools the product offers a teacher.
+ *
+ * Only the last one is built. The rest describe the wider VedaAI toolkit and
+ * are here so Home reads as the product's front door rather than a dead
+ * screen - each card says what the tool would do, and the page says plainly
+ * that one of them exists.
+ */
+const TOOLS: {
+  title: string;
+  blurb: string;
+  Icon: typeof Home;
+  section?: SectionKey;
+  built?: boolean;
+}[] = [
+  {
+    title: "Academic Content Creator",
+    blurb: "Generate worksheets, assignments and question papers instantly with VedaAI.",
+    Icon: PdfBadge,
+  },
+  {
+    title: "Question Paper Creator",
+    blurb: "Create exams, quizzes, rubrics, viva questions and internal assessments.",
+    Icon: Assignments,
+  },
+  {
+    title: "Lesson Plan Creator",
+    blurb: "Generate citations, references and literature summaries, and simplify research papers.",
+    Icon: Library,
+  },
+  {
+    title: "Writing Feedback",
+    blurb: "Analyse student writing and generate structured feedback instantly.",
+    Icon: Classroom,
+  },
+  {
+    title: "Teaching Ideas & Activity",
+    blurb: "Discover engaging teaching ideas and classroom activities with VedaAI.",
+    Icon: Sparkle,
+  },
+  {
+    title: "Extraction & Answer Mapping",
+    blurb: "Upload a paper and a handwritten answer sheet - it extracts, matches, highlights and marks.",
+    Icon: Exams,
+    section: "exams",
+    built: true,
+  },
+];
+
+function HomeScreen({ onOpen }: { onOpen: (key: SectionKey) => void }) {
+  const firstName = DEMO_TEACHER.name.split(" ")[0];
+
+  return (
+    <section className="flex-1 px-3 pb-6 sm:px-5">
+      <div className="mx-auto w-full max-w-220">
+        <div className="relative">
+          {/* The same figure the upload screen uses - one asset from the Figma,
+              so the composition matches rather than being re-approximated. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hero-teacher.png"
+            alt=""
+            width={600}
+            height={600}
+            className="pointer-events-none absolute right-0 top-0 hidden h-28 w-28 select-none lg:block"
+            draggable={false}
+          />
+
+          <div className="flex flex-col items-center pb-5 pt-2 text-center">
+            <span className="rounded-full bg-ink px-6 py-2.5 text-[20px] font-bold text-white">
+              Hi {firstName} <span aria-hidden>&#128075;</span>
+            </span>
+            <p className="mt-3 max-w-160 text-[14px] font-semibold text-ink-soft">
+              Let&apos;s begin brewing some teaching materials effortlessly with{" "}
+              <span className="text-brand">VedaAI</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {TOOLS.map((tool) => {
+            const open = tool.section;
+            return (
+              <button
+                key={tool.title}
+                type="button"
+                onClick={() => open && onOpen(open)}
+                className={[
+                  "group relative flex flex-col items-start rounded-panel bg-white p-4 text-left transition",
+                  open
+                    ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+                    : "cursor-default",
+                ].join(" ")}
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-ink text-white">
+                  <tool.Icon width={17} height={17} />
+                </span>
+
+                <span className="mt-3.5 flex flex-wrap items-center gap-2">
+                  <span className="text-[14px] font-bold">{tool.title}</span>
+                  {tool.built ? (
+                    <span className="rounded-full bg-good-bg px-2 py-0.5 text-[10.5px] font-semibold text-good">
+                      Built
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-chip px-2 py-0.5 text-[10.5px] font-semibold text-ink-faint">
+                      Concept
+                    </span>
+                  )}
+                </span>
+
+                <span className="mt-1.5 text-[12.5px] leading-normal text-ink-soft">
+                  {tool.blurb}
+                </span>
+
+                {open && (
+                  <span className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand">
+                    Open
+                    <ArrowRight width={13} height={13} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/*
+          The grid above is the product's front door, and five of its six cards
+          describe tools that do not exist in this build. Saying which one is
+          real is the difference between a demo and a claim.
+        */}
+        <p className="pt-4 text-center text-[12px] text-ink-faint">
+          One of these is built in this version — Extraction &amp; Answer
+          Mapping. The rest describe the wider toolkit and are shown for
+          context.
+        </p>
+      </div>
+    </section>
   );
 }
 
