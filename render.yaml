@@ -8,8 +8,12 @@
 #
 # Free instances sleep after ~15 minutes idle and take 30-60s to wake. The
 # frontend shows a "waking up" state for exactly this reason, and a
-# cron-job.org ping every 10 minutes to /api/health keeps it warm through the
-# evaluation window.
+# cron-job.org job pings /api/health every 10 minutes to hold the instance
+# open through the evaluation window. Ten and not fifteen: Render's timer is
+# only approximately fifteen minutes, so a fifteen-minute ping races it.
+#
+# healthCheckPath below points at the same endpoint, which is why it is the
+# cheap one - no file reads, no model call, nothing against the daily quota.
 services:
   - type: web
     name: veda-extraction-api

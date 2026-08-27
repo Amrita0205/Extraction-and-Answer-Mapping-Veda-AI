@@ -440,11 +440,26 @@ box in green. Run this against a real sheet before trusting anything else.
 ## Deploying
 
 **API → Render.** Point Render at this repo, choose Blueprint, and it reads
-`render.yaml` at the repo root. Set `GEMINI_API_KEY` in the dashboard. Free instances sleep
-after ~15 minutes idle and take 30–60s to wake, so a cron-job.org ping to
-`/api/health` every 10 minutes keeps it warm — and the frontend shows an
-explicit "waking the server" state so a cold start reads as designed rather
-than broken.
+`render.yaml` at the repo root. Set `GEMINI_API_KEY` in the dashboard — it is
+the only secret; the model, the fallback rotation and the Python version are
+all in the blueprint.
+
+**Keeping it awake.** A free Render instance sleeps after ~15 minutes idle and
+takes 30–60s to wake. The frontend shows an explicit "waking the server" state
+so a cold start reads as designed rather than broken, but a reviewer opening a
+cold link still waits.
+
+A cron-job.org job pings `/api/health` to hold it open:
+
+| | |
+|---|---|
+| URL | `https://extraction-and-answer-mapping-veda-ai.onrender.com/api/health` |
+| Interval | every 10 minutes |
+
+Ten rather than fifteen on purpose. Render's timer is *about* fifteen minutes,
+so a fifteen-minute ping races it and loses roughly as often as it wins. The
+endpoint is deliberately the cheap one: `/api/health` reads no files and calls
+no model, so holding the instance open costs nothing against the daily quota.
 
 **Web → Vercel.** Root directory `web` — this is the setting to get right, as
 a build from the repo root fails with "No Next.js version detected". Set
