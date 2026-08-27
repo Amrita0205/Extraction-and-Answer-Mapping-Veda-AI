@@ -30,10 +30,15 @@ export type SectionKey =
   | "settings"
   | "toolkit";
 
-const NAV: { key: SectionKey; label: string; Icon: typeof Home }[] = [
+const NAV: {
+  key: SectionKey;
+  label: string;
+  Icon: typeof Home;
+  badge?: string;
+}[] = [
   { key: "home", label: "Home", Icon: Home },
   { key: "classroom", label: "My Classroom", Icon: Classroom },
-  { key: "assignments", label: "Assignments", Icon: Assignments },
+  { key: "assignments", label: "Assignments", Icon: Assignments, badge: "32" },
   { key: "exams", label: "Exams", Icon: Exams },
   { key: "library", label: "My Library", Icon: Library },
 ];
@@ -531,7 +536,7 @@ function Sidebar({
           collapsed ? "items-center" : "",
         ].join(" ")}
       >
-        {NAV.map(({ key, label, Icon }) => (
+        {NAV.map(({ key, label, Icon, badge }) => (
           <button
             key={key}
             type="button"
@@ -547,7 +552,16 @@ function Sidebar({
             ].join(" ")}
           >
             <Icon />
-            {!collapsed && <span>{label}</span>}
+            {!collapsed && (
+              <>
+                <span className="min-w-0 flex-1 text-left">{label}</span>
+                {badge && (
+                  <span className="shrink-0 rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-white">
+                    {badge}
+                  </span>
+                )}
+              </>
+            )}
           </button>
         ))}
       </nav>
@@ -1024,7 +1038,7 @@ function HomeScreen({ onOpen }: { onOpen: (key: SectionKey) => void }) {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {TOOLS.map((tool) => {
             const open = tool.section;
             return (
@@ -1033,39 +1047,51 @@ function HomeScreen({ onOpen }: { onOpen: (key: SectionKey) => void }) {
                 type="button"
                 onClick={() => open && onOpen(open)}
                 className={[
-                  "group relative flex flex-col items-start rounded-panel bg-white p-4 text-left transition",
-                  open
-                    ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
-                    : "cursor-default",
+                  // Two layers, as the design has them: a recessed grey plate
+                  // with the white card sitting lower and in front of it, and
+                  // the icon straddling the seam between the two. The plate is
+                  // what the product's artwork sits in; without it the cards
+                  // read as flat tiles.
+                  "group relative rounded-panel bg-black/[0.045] pt-12 text-left transition",
+                  open ? "cursor-pointer hover:-translate-y-0.5" : "cursor-default",
                 ].join(" ")}
               >
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-ink text-white">
-                  <tool.Icon width={17} height={17} />
+                <span
+                  className={[
+                    "absolute left-4 top-6 z-10 grid h-11 w-11 place-items-center rounded-full bg-ink text-white transition",
+                    open ? "group-hover:bg-brand" : "",
+                  ].join(" ")}
+                >
+                  <tool.Icon width={18} height={18} />
                 </span>
 
-                <span className="mt-3.5 flex flex-wrap items-center gap-2">
-                  <span className="text-[14px] font-bold">{tool.title}</span>
-                  {tool.built ? (
-                    <span className="rounded-full bg-good-bg px-2 py-0.5 text-[10.5px] font-semibold text-good">
-                      Built
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-chip px-2 py-0.5 text-[10.5px] font-semibold text-ink-faint">
-                      Concept
-                    </span>
-                  )}
-                </span>
-
-                <span className="mt-1.5 text-[12.5px] leading-normal text-ink-soft">
-                  {tool.blurb}
-                </span>
-
-                {open && (
-                  <span className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand">
-                    Open
-                    <ArrowRight width={13} height={13} />
+                {tool.built && (
+                  <span className="absolute right-4 top-4 z-10 rounded-full bg-good-bg px-2 py-0.5 text-[10.5px] font-semibold text-good">
+                    Built
                   </span>
                 )}
+
+                <div
+                  className={[
+                    "flex h-full flex-col rounded-panel bg-white px-4 pb-4 pt-8 transition",
+                    open
+                      ? "shadow-[0_1px_3px_rgba(0,0,0,0.06)] group-hover:shadow-[0_8px_22px_rgba(0,0,0,0.09)]"
+                      : "shadow-[0_1px_3px_rgba(0,0,0,0.06)]",
+                  ].join(" ")}
+                >
+                  <span className="block text-[14px] font-bold">{tool.title}</span>
+
+                  <span className="mt-1.5 text-[12.5px] leading-normal text-ink-soft">
+                    {tool.blurb}
+                  </span>
+
+                  {open && (
+                    <span className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand">
+                      Open
+                      <ArrowRight width={13} height={13} />
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
