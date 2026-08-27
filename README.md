@@ -193,6 +193,29 @@ python eval/run_eval.py --case synthetic
 python eval/run_eval.py --rescore      # re-score the cache, no API calls
 ```
 
+### Depth: a hand-written sheet with independent ground truth
+
+`dataset/` holds a real test: a 17-question paper, four sheets of handwriting,
+the script they were copied from, and `ground-truth.json` — **written before the
+sheet was marked**, so it cannot have been fitted to the output.
+
+The paper prints 14 numbers but contains 17 questions: 11 and 14 each split into
+labelled sub-parts, and 13 appears twice as an internal choice. The sheet is
+deliberately adversarial — answers out of order (Q4 is answered four sheets from
+where it was printed), Q7 skipped, Q5 wrong on purpose, Q10 earning partial
+credit, Q12 spanning a page break mid-sentence, only one branch of Q13 answered,
+and two blocks matching nothing.
+
+**Scored 35 / 40 against a ground truth of 35**, with 16 of 17 questions exactly
+right and every structural case handled.
+
+It earned its keep on its first run by exposing two real defects: a digit
+misread on the sheet ("8" as "7") filed an answer under the wrong question *and*
+reported the right one blank — two questions lost to one character — and an
+internal choice resolved to the branch the student had not answered, because an
+answer that compares itself to the other branch borrows that branch's
+vocabulary. Both are fixed and pinned by tests.
+
 ### Breadth: all 14 subjects
 
 ```bash
@@ -219,6 +242,7 @@ caveat nobody reads.
 | `eval/results/` | committed — `report.md`, `summary.json`, `dataset_sweep.json`, `dashboard.html` |
 | `eval/out/` | scratch — rendered pages and cached raw runs, gitignored |
 | `eval/cases/` | ground truth — `synthetic.json` plus the committed `fixtures/synthetic.pdf` it scores against |
+| `dataset/` | the hand-written test sheet, its paper, and `ground-truth.json` |
 
 The sheet is committed rather than rebuilt on demand. Regenerating it needs a
 handwriting font, and a machine with a different font set produces a different
@@ -433,7 +457,13 @@ Render URL. Set `ALLOWED_ORIGINS` on the API to the Vercel URL once it exists.
   does not. There is no rubric or marking scheme input.
 - **Grading is a language model's judgement**, not a moderated mark. It is
   shown as an aid, and the per-question feedback is there so a teacher can
-  disagree with it quickly.
+  disagree with it quickly. It is also the weakest stage: on the hand-written
+  test it under-penalised a wrong multiple-choice answer, hedging where the
+  paper is unambiguous. Extraction, mapping and highlighting were exact on the
+  same sheet — marking is where a teacher override would earn its keep.
+- **An answer matched to a question it does not address is flagged as such**,
+  separately from a low mark. That pattern usually means the mapping is wrong
+  rather than the pupil, and a teacher should re-check the pairing first.
 - **Diagrams are matched, not marked well.** A diagram is transcribed as its
   labels plus a short note, which is enough to map and highlight it but thin
   evidence for awarding marks.
