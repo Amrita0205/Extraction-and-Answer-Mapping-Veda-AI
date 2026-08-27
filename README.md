@@ -257,8 +257,16 @@ python eval/run_dataset_sweep.py --max-answer-pages 2
 python eval/dashboard.py               # -> eval/results/dashboard.html
 ```
 
-Every subject in `datasets/` runs, and **mean question-extraction coverage is
-90%** against each paper's own printed numbering — six subjects at 100%, none
+**The scans themselves are not in this repo.** They are 76MB of CBSE booklets
+that are not ours to redistribute, and their question papers are AI
+reconstructions rather than real exam papers, so they cannot support an
+accuracy claim anyway. What is committed is the measurement they produced:
+`eval/results/dataset_sweep.json` and `dashboard.html`. Point the sweep at any
+folder of `<subject>/*_Question_Paper.pdf` + `*_Answer_Sheet.pdf` to reproduce
+the shape of it.
+
+Across those 14 subjects, **mean question-extraction coverage was 90%**
+against each paper's own printed numbering — six subjects at 100%, none
 below 80%, no failures. That metric is measured on the question paper, which is
 read in full, so the page cap does not touch it.
 
@@ -290,11 +298,13 @@ about messy handwriting. It caught two real bugs on its first run — a box
 format the parser was rejecting, and an orphaned label being reassigned by
 content overlap — both of which had been silently degrading real runs.
 
-For breadth over real handwriting, `eval/run_dataset_sweep.py` runs every
-subject in `datasets/` and reports coverage against each paper's own printed
-numbering. Read the caveat in **Assumptions and limitations** first: those
-papers are reconstructions, so end-to-end accuracy over them is not a number
-worth quoting.
+For breadth over real handwriting, `eval/run_dataset_sweep.py` sweeps a folder
+of subjects and reports coverage against each paper's own printed numbering.
+The run it produced is committed in `eval/results/`; the scans are not, being
+neither small nor ours to redistribute. Read the caveat in **Assumptions and
+limitations** first: those papers are reconstructions, so end-to-end accuracy
+over them is not a number worth quoting - which is exactly why `dataset/`
+exists.
 
 ---
 
@@ -499,7 +509,7 @@ with a published CVE, which is why `next` is on 15.5.24 rather than 15.5.4.
   and grading is ~180s. The local work — rendering, tightening, mapping — is
   under a second in total.
 - **The bundled dataset's papers are reconstructed, and do not fully match
-  their booklets.** Every PDF in `datasets/` states on its first page that it
+  their booklets.** Every PDF in that set states on its first page that it
   was *reconstructed from the submitted answer booklet* — only the booklets
   were available, so a model inferred the questions from the visible working.
   They are excellent handwriting samples, but they are weak ground truth for
