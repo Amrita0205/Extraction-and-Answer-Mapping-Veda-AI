@@ -51,9 +51,17 @@ LINE_H = 44
 # model reading handwriting, and rendered Helvetica would be a much easier task
 # than the one the product actually faces.
 FONT_CANDIDATES = [
+    # Windows
     r"C:\Windows\Fonts\Inkfree.ttf",
     r"C:\Windows\Fonts\segoesc.ttf",
     r"C:\Windows\Fonts\comic.ttf",
+    # macOS
+    "/System/Library/Fonts/Supplemental/Bradley Hand Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Comic Sans MS.ttf",
+    "/Library/Fonts/Comic Sans MS.ttf",
+    # Linux
+    "/usr/share/fonts/truetype/msttcorefonts/Comic_Sans_MS.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
 
 # (page, label, [paragraph lines]) — drawn in this order, top to bottom.
@@ -122,12 +130,23 @@ AS_QUESTION = {"Q1.": "1", "Q2.": "2", "Q3.": "3", "Q5.": "5",
 
 
 def font(size: int) -> ImageFont.FreeTypeFont:
+    """The first available face from `FONT_CANDIDATES`.
+
+    Regenerating the sheet on a machine with a different font set produces a
+    *different* sheet, and therefore different numbers — which is the reason
+    `synthetic.pdf` is committed rather than left to be rebuilt. Rebuild it
+    only when you mean to, and re-run the eval when you do.
+    """
     for path in FONT_CANDIDATES:
         if Path(path).exists():
             return ImageFont.truetype(path, size)
     raise SystemExit(
-        "No handwriting font found. Install one, or add a path to "
-        "FONT_CANDIDATES."
+        "No usable font found. Add a path to FONT_CANDIDATES — a handwriting "
+        "face is preferred, since the point is to make the model read "
+        "handwriting rather than clean type.\n"
+        "You do not need this to run the eval: eval/cases/fixtures/"
+        "synthetic.pdf is committed, so `python eval/run_eval.py --case "
+        "synthetic` works without regenerating anything."
     )
 
 

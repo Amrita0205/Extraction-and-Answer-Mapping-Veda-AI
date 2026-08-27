@@ -218,7 +218,12 @@ caveat nobody reads.
 |---|---|
 | `eval/results/` | committed — `report.md`, `summary.json`, `dataset_sweep.json`, `dashboard.html` |
 | `eval/out/` | scratch — rendered pages and cached raw runs, gitignored |
-| `eval/cases/` | ground truth; `fixtures/` is regenerable and gitignored |
+| `eval/cases/` | ground truth — `synthetic.json` plus the committed `fixtures/synthetic.pdf` it scores against |
+
+The sheet is committed rather than rebuilt on demand. Regenerating it needs a
+handwriting font, and a machine with a different font set produces a different
+sheet and therefore different numbers — so `run_eval.py --case synthetic`
+reproduces the figures above on a fresh clone with no extra step.
 
 **What this is and isn't.** It is a calibration case: rendered handwriting, so
 transcription is easier than a real scan, and a run that does not score near

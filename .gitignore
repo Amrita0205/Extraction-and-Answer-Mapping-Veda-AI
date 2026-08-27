@@ -22,4 +22,10 @@ spike/out/
 # is the opposite - small, and the whole point of running the thing - so it is
 # committed in full.
 eval/cases/fixtures/
+# ...except the generated one. It is 273KB, it is ours, and it is what the
+# committed accuracy numbers were measured against. It is also not reliably
+# regenerable off this machine: make_synthetic_case.py needs a handwriting
+# font and only knows Windows paths, so a reviewer on macOS or Linux could
+# not rebuild it to check the report.
+!eval/cases/fixtures/synthetic.pdf
 eval/out/
