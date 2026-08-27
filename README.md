@@ -351,6 +351,12 @@ it in about two seconds, including while a job is mid-run. It ships with
 Configuration is read from `api/.env` at import time, so a change there is
 picked up by the same restart. Port 8001 is what `web/.env.local` expects.
 
+**Do not run `next build` while `next dev` is running.** Both write to `.next`,
+and the production build overwrites the dev chunks, after which the dev server
+serves a mix of the two and the page dies with
+`__webpack_modules__[moduleId] is not a function`. Stop the dev server first,
+or `rm -rf web/.next` and restart it to recover.
+
 ### Tests
 
 ```bash
