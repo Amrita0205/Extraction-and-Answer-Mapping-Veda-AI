@@ -2,7 +2,11 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 python-dotenv==1.0.1
-pydantic==2.10.4
+# Not pinned exactly: 2.10.4 has no wheel for the Python that a host may
+# default to, and pip then tries to build pydantic-core from Rust source,
+# which fails on a read-only build image. This range is also honest about
+# what is actually tested - the machine this was developed on runs 2.13.
+pydantic>=2.10.4,<3
 google-genai>=2.20.0
 PyMuPDF==1.25.1
 # Ranges rather than pins: these two are commonly already installed alongside
