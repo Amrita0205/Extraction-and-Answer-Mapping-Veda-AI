@@ -139,8 +139,13 @@ def _grade_batch(batch: list[Question]) -> None:
         '"addresses_question": boolean, "feedback": string}]}\n\n'
         + json.dumps(payload, ensure_ascii=False)
     )
-    # Marking benefits from a little deliberation, unlike extraction.
-    data = gemini.generate_json(prompt, temperature=0.1, thinking_budget=None)
+    # Thinking stays on - marking benefits from deliberation where extraction
+    # does not - but the temperature does not. Marking a binary conversion is
+    # not a task with room for invention: the same sheet was scored 28, 35.5
+    # and 35 out of 40 across runs of identical code, and a correct answer to
+    # "convert 45 to binary" came back 3/3 once and 2/3 the next time. Sampling
+    # noise in a mark is indefensible to the student it lands on.
+    data = gemini.generate_json(prompt, temperature=0.0, thinking_budget=None)
     grades = data.get("grades", []) if isinstance(data, dict) else data or []
 
     by_id = {q.id: q for q in batch}
