@@ -505,7 +505,11 @@ function Sidebar({
         no other control, so the only way back was a reload — and the width is
         remembered while the app is open, so a reload did not always undo it
         either. Collapsed, it stacks under the logo, which is the only spare
-        room a 64px rail has.
+        room a 64px rail has, and becomes an arrow: the panel glyph says
+        "toggles a panel", where the arrow says which way this one is about to
+        go. There is exactly one of these. The rail used to carry a second
+        arrow down beside the school crest, and two controls doing one job
+        read as two jobs.
       */}
       <div
         className={[
@@ -533,7 +537,7 @@ function Sidebar({
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="rounded-md p-1 text-ink-faint transition hover:bg-chip hover:text-ink"
         >
-          <PanelToggle />
+          {collapsed ? <Chevron dir="right" width={16} height={16} /> : <PanelToggle />}
         </button>
       </div>
 
@@ -607,17 +611,7 @@ function Sidebar({
         </button>
 
         {collapsed ? (
-          <>
-            <School width={24} height={24} />
-            <button
-              type="button"
-              onClick={onToggle}
-              aria-label="Expand sidebar"
-              className="mt-1 rounded-md p-1 text-ink-faint transition hover:bg-chip hover:text-ink"
-            >
-              <Chevron dir="right" width={16} height={16} />
-            </button>
-          </>
+          <School width={24} height={24} />
         ) : (
           <div className="mt-2 flex items-center gap-2 rounded-xl bg-chip px-2.5 py-2">
             <School />
