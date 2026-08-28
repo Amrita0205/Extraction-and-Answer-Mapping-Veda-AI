@@ -488,6 +488,34 @@ class _stub_model:
         return False
 
 
+
+# ADDED SO THAT A ZERO-PADDED LABEL ("05.") STILL FINDS QUESTION 5 - THE ORPHAN
+# CHECK COMPARED RAW NUMBERS AND THREW AWAY EVERY ANSWER ON A PADDED SHEET.
+def test_zero_padded_labels_match_the_printed_number():
+    """Students zero-pad. A sheet numbered "01." to "09." is ordinary.
+
+    The safeguard that leaves "Q15" unmatched on a paper ending at 14 compared
+    the number as written against the paper's numbers, so "05" was judged a
+    question the paper does not contain and was held back from every remaining
+    rung. On a padded sheet that silently discarded most of the answers.
+    """
+    questions = [
+        _question("5", None, "Which sorting algorithm has O(n log n) worst case?", 1),
+        _question("6", None, "Define time complexity.", 3),
+        _question("7", None, "Differentiate between a compiler and an interpreter.", 3),
+    ]
+    blocks = [
+        _block("a5", "05.", "(b) Quick Sort"),
+        _block("a6", "06.", "Time complexity measures the running time of an algorithm."),
+        _block("a7", "07.", "A compiler translates the whole program, an interpreter line by line."),
+    ]
+    questions, unmatched, _w = mapping.map_answers(questions, blocks)
+
+    assert [q.status for q in questions] == ["answered"] * 3
+    assert unmatched == [], "a padded label is the same question, not a stray answer"
+    assert labels.norm_number("05") == labels.norm_number("5")
+
+
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

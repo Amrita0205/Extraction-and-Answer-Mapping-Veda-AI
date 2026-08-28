@@ -144,10 +144,21 @@ def clean_part(part: str | None) -> str:
     return _PART_TRIM.sub("", (part or "")).lower()
 
 
+def norm_number(number: str | None) -> str:
+    """`"05"` -> `"5"`.
+
+    Students zero-pad: a sheet numbered "01." through "09." is ordinary. Any
+    comparison between a number read off handwriting and one read off the
+    printed paper has to go through here, or "05" is judged a different
+    question from "5".
+    """
+    n = (number or "").strip()
+    return n.lstrip("0") or n
+
+
 def key(number: str | None, part: str | None) -> str:
     """A stable identity for a question, used to join answers to questions."""
-    n = (number or "").lstrip("0") or (number or "")
-    return f"{n}|{clean_part(part)}"
+    return f"{norm_number(number)}|{clean_part(part)}"
 
 
 def sort_key(number: str | None, part: str | None) -> tuple:

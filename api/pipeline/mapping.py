@@ -76,7 +76,7 @@ def map_answers(
     taken: dict[str, AnswerBlock] = {}
 
     blocks = _merge_same_label(blocks)
-    numbers_on_paper = {q.number for q in questions}
+    numbers_on_paper = {labels.norm_number(q.number) for q in questions}
 
     # Blocks the student labelled with a question the paper does not contain.
     # These are held back from the content and adjudication rungs below: the
@@ -92,7 +92,7 @@ def map_answers(
     for block in blocks:
         number, part = labels.parse(block.label)
         method = "label"
-        if number is not None and number not in numbers_on_paper:
+        if number is not None and labels.norm_number(number) not in numbers_on_paper:
             orphaned.add(block.id)
             continue
         if number is None:
