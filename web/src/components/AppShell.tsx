@@ -316,9 +316,17 @@ function useDismiss(onClose: () => void) {
 
 export function AppShell({
   collapsed: fromView = false,
+  onBack,
   children,
 }: {
   collapsed?: boolean;
+  /**
+   * Where "back" goes from inside the Exams flow — the results screen passes
+   * its reset, so the arrow returns to the upload form. Omitted on the upload
+   * screen itself, where there is nowhere behind to go, and the arrow hides
+   * rather than sitting there doing nothing.
+   */
+  onBack?: () => void;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(fromView);
@@ -370,6 +378,11 @@ export function AppShell({
         <TopBar
           onMenu={() => setDrawer(true)}
           onHome={() => go("exams")}
+          onBack={
+            // Off in a sample section, back means "return to the flow that
+            // works". Inside Exams it means the previous step, if there is one.
+            section !== "exams" ? () => go("exams") : onBack
+          }
           section={section}
         />
         {/*
@@ -626,10 +639,12 @@ function Sidebar({
 function TopBar({
   onMenu,
   onHome,
+  onBack,
   section,
 }: {
   onMenu: () => void;
   onHome: () => void;
+  onBack?: () => void;
   section: SectionKey;
 }) {
   const [open, setOpen] = useState<"help" | "bell" | "user" | null>(null);
@@ -650,14 +665,22 @@ function TopBar({
       >
         <Menu />
       </button>
-      <button
-        type="button"
-        aria-label="Back"
-        onClick={onHome}
-        className="hidden h-9 w-9 place-items-center rounded-lg text-ink-soft transition hover:bg-chip md:grid"
-      >
-        <ArrowLeft />
-      </button>
+      {/*
+        Rendered only when it goes somewhere. It previously always jumped to
+        Exams, which meant that on the Exams screen itself the arrow was a
+        control that visibly did nothing — and after a run there was no way
+        back to the upload form except the summary strip's own button.
+      */}
+      {onBack && (
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={onBack}
+          className="hidden h-9 w-9 place-items-center rounded-lg text-ink-soft transition hover:bg-chip hover:text-ink md:grid"
+        >
+          <ArrowLeft />
+        </button>
+      )}
       <button
         type="button"
         onClick={onHome}

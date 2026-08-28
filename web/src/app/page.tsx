@@ -93,7 +93,7 @@ export default function Page() {
   };
 
   return (
-    <AppShell collapsed={view !== "upload"}>
+    <AppShell collapsed={view !== "upload"} onBack={view === "result" ? reset : undefined}>
       {view === "upload" && <UploadScreen onStart={start} error={error} />}
       {view === "processing" && (
         <LoadingScreen stage={stage} progress={progress} waking={waking} />
