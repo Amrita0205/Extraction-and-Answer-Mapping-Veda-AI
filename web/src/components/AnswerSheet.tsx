@@ -71,20 +71,24 @@ export function AnswerSheet({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel bg-white">
-      {/* Wraps rather than squashing: on a narrow phone the zoom and pager
+      {/* Light, not dark. The Figma puts this header on white with the zoom
+          and pager as grey pills; a dark bar reads as a different component
+          and pulls attention off the scan, which is the thing to look at.
+
+          Wraps rather than squashing: on a narrow phone the zoom and pager
           pills drop to a second row instead of colliding with the title. */}
-      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 bg-ink px-3 py-1.5 text-white">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-hairline bg-white px-3 py-1.5 text-ink">
         <span className="shrink-0 whitespace-nowrap text-[13px] font-semibold">
           Answer Sheet
         </span>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1">
+          <span className="flex items-center gap-1 rounded-full bg-chip px-1.5 py-1">
             <button
               type="button"
               aria-label="Zoom out"
               onClick={() => zoomBy(-1)}
-              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-white/15"
+              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-black/10"
             >
               <Minus width={13} height={13} />
             </button>
@@ -95,19 +99,19 @@ export function AnswerSheet({
               type="button"
               aria-label="Zoom in"
               onClick={() => zoomBy(1)}
-              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-white/15"
+              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-black/10"
             >
               <Plus width={13} height={13} />
             </button>
           </span>
 
-          <span className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1">
+          <span className="flex items-center gap-1 rounded-full bg-chip px-1.5 py-1">
             <button
               type="button"
               aria-label="Previous page"
               onClick={() => step(-1)}
               disabled={current === 0}
-              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-white/15 disabled:opacity-35"
+              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-black/10 disabled:opacity-35"
             >
               <Chevron dir="left" width={13} height={13} />
             </button>
@@ -119,7 +123,7 @@ export function AnswerSheet({
               aria-label="Next page"
               onClick={() => step(1)}
               disabled={current >= pages.length - 1}
-              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-white/15 disabled:opacity-35"
+              className="grid h-6 w-6 place-items-center rounded-full transition hover:bg-black/10 disabled:opacity-35"
             >
               <Chevron dir="right" width={13} height={13} />
             </button>

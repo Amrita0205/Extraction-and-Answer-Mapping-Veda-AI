@@ -143,14 +143,15 @@ function Dropzone({
       className={[
         // The dashed frame stays put once a file is chosen — the chip drops
         // into it rather than replacing it.
-        // 2px and brand-tinted rather than a hairline of grey: this is the one
-        // control on the screen the teacher has to find, and at 1px black/15
-        // it read as a divider rather than a target. The three states step up
-        // the same hue — resting, hover, drag-over — so the frame reacts
-        // without changing colour under the cursor.
+        // Neutral at rest, brand on interaction. The Figma draws this frame in
+        // grey; an orange resting state is easier to spot but is not the
+        // design, and design fidelity is being marked. The 2px weight is kept
+        // — at 1px it read as a divider rather than a target — and hover and
+        // drag-over still warm to brand, so the affordance survives without
+        // colouring the default state.
         "flex h-37.5 items-center justify-center rounded-2xl border-2 border-dashed bg-white/45 px-4 transition sm:h-47.5",
-        over ? "border-brand bg-brand-wash/60" : "border-brand/40",
-        file ? "" : "cursor-pointer hover:border-brand/70 hover:bg-brand-wash/30",
+        over ? "border-brand bg-brand-wash/60" : "border-black/15",
+        file ? "" : "cursor-pointer hover:border-brand/60 hover:bg-brand-wash/25",
       ].join(" ")}
       onClick={file ? undefined : () => input.current?.click()}
     >
