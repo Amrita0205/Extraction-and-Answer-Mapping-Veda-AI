@@ -7,23 +7,38 @@ difference.
 Rendering DPI is a real accuracy lever: too low and the vision model misreads
 handwriting, too high and we blow the free-tier request size. 150 DPI on A4
 gives ~1240x1754, which is comfortably inside Gemini's image budget and legible
-for handwriting.
+for handwriting. Raising it to 200 was tried and scored no better on the
+hand-marked sheet, so it stays where the committed numbers were measured;
+`VEDA_RENDER_DPI` moves it without an edit for anyone who wants to retest.
+
+Every page then goes through `preprocess`, which deskews and evens out the
+lighting when it measures that the page needs it. That happens here, and not
+just before the upload, so that the cleaned page is the one everything shares:
+the model reads it, `tighten.py` looks for ink in it, and the browser displays
+it. Cleaning a copy for the model alone would put every returned box in a
+coordinate frame no other component agrees with.
 """
 
 from __future__ import annotations
 
 import io
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 import fitz  # PyMuPDF
 from PIL import Image
 
+from . import preprocess as prep
+
 log = logging.getLogger(__name__)
 
-RENDER_DPI = 150
-MAX_EDGE = 2200  # hard cap so a huge scan can't blow up memory or upload size
+# Overridable so the accuracy harness can A/B a resolution change without an
+# edit to source. 150 was the previous value and is what the committed numbers
+# before this were measured at.
+RENDER_DPI = int(os.environ.get("VEDA_RENDER_DPI", "150"))
+MAX_EDGE = int(os.environ.get("VEDA_MAX_EDGE", "2200"))
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
 
@@ -36,6 +51,16 @@ class RenderedPage:
     # Text extracted from the PDF's own text layer, when it has one.
     # Printed question papers usually do; scanned answer sheets never do.
     text_layer: str = ""
+
+
+def _finish(img: Image.Image, path: Path, page: int, src: Path) -> Image.Image:
+    """Downscale, clean, and write the page image everything downstream uses."""
+    img = _downscale(img)
+    img, steps = prep.preprocess(img)
+    if steps:
+        log.info("cleaned page %s of %s: %s", page, src.name, steps)
+    img.save(path, "PNG", optimize=True)
+    return img
 
 
 def _downscale(img: Image.Image) -> Image.Image:
@@ -81,9 +106,8 @@ def _render_image(src: Path, out_dir: Path, prefix: str) -> list[RenderedPage]:
 
     pages: list[RenderedPage] = []
     for i, frame in enumerate(frames):
-        frame = _downscale(frame)
         path = out_dir / f"{prefix}-{i}.png"
-        frame.save(path, "PNG", optimize=True)
+        frame = _finish(frame, path, i, src)
         pages.append(RenderedPage(i, path, frame.width, frame.height))
     return pages
 
@@ -97,9 +121,8 @@ def _render_pdf(src: Path, out_dir: Path, prefix: str) -> list[RenderedPage]:
     for i, page in enumerate(doc):
         pixmap = page.get_pixmap(matrix=matrix, alpha=False)
         img = Image.open(io.BytesIO(pixmap.tobytes("png")))
-        img = _downscale(img)
         path = out_dir / f"{prefix}-{i}.png"
-        img.save(path, "PNG", optimize=True)
+        img = _finish(img, path, i, src)
 
         try:
             text = page.get_text("text") or ""

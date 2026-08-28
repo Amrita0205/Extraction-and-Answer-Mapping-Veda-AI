@@ -351,6 +351,105 @@ were real, and neither was visible by looking at output and squinting.
 
 ---
 
+## Page cleaning, and the bug it uncovered
+
+Every accuracy loss on this project had been a misread *label* — an `8` read as
+a `7`, a zero-padded `05.` — so the next lever tried was upstream of the model:
+clean the scan before it is read. `api/pipeline/preprocess.py` flattens uneven
+lighting, stretches faint ink, and deskews, each step gated on measuring that
+the page needs it. It calls nothing; the free tier meters requests per day, not
+pixels.
+
+`eval/preprocess_ab.py` measures it without spending quota. On the four
+photographed sheets in `dataset/`:
+
+| | before | after |
+|---|---|---|
+| residual skew | up to 2.1° | 0.00° on every page |
+| background range | 91–120 grey levels | 17–22 |
+| ink/paper separation | 194–217 | 240–243 |
+
+A digitally generated PDF comes back byte-identical: every gate declines.
+
+### Then it scored worse, which is the interesting part
+
+End to end on the hand-marked sheet, cleaning **dropped 35/40 to 31.5**. The
+cached answer blocks from both runs said why, and it was not image quality —
+the transcribed *text* was identical in both. Only the labels differed, in both
+directions. Cleaning read `08.` where the raw page gave `Q7.` (the raw one was
+wrong), and `Q11 b.` where the raw page gave `11 b.`. It also read `Q14.` where
+the raw page gave `Q14. b.`.
+
+That one dropped `b.` cost four marks, through `_resolve`:
+
+- `Q14.` carried no sub-part, so it took the first free sibling — `14(a)`.
+- The real `Q14 a.` then found `14(a)` taken and was reported **unmatched**.
+- `Rough work` shifted onto the `14(b)` vacancy left behind.
+
+Two questions lost and a third mis-filed, from one character — the same shape
+as the `8`/`7` fault above, and still unguarded. Students write the number on
+one line and `b.` on the next, so the transcription splitting them is ordinary,
+not exotic.
+
+The fix does not guess. The sub-part is still sitting in the answer's own
+opening words (`Q14. b. 45 divided by 2 ...`), so `_resolve` reads it there
+before falling back to writing order, and only when the number agrees. Pinned
+by `test_a_label_that_lost_its_subpart_is_recovered_from_the_answer`, which
+fails without it, and by a second test holding the plain-`Q11.` fallback in
+place.
+
+With that fixed, cleaning scores **35/40 again** — the same as the raw pages.
+
+### Where it landed
+
+Cleaning is **on**. It did not move the mark total on the one sheet with
+ground truth, and it is not claimed to: it is on because it no-ops on clean
+input, because it demonstrably fixes the defects it targets on photographed
+input, and because it costs no quota. What it actually earned its keep for was
+exposing a four-mark mapping fault that had been latent in every run.
+
+Two things were tried and dropped:
+
+- **200 DPI** rendering. Scored no better; reverted to 150, where the committed
+  numbers were measured. `VEDA_RENDER_DPI` moves it for anyone retesting.
+- **Contrast stretch on every scan.** The first threshold let it fire on pages
+  that only needed flattening, and what it amplified was the show-through from
+  the reverse side of thin notebook paper — which sits between ink and paper
+  and gets pulled toward ink with everything else. The bar now sits where only
+  genuinely faint pages fall under it.
+
+### One deviation left
+
+`Q5.` is sometimes read as `15.`. The paper stops at 14, so the orphan rule
+holds it out of content matching and Q5 reports blank. That rule is not being
+loosened: this same sheet carries a *genuine* `Q15` answering nothing, the two
+are indistinguishable from the label alone, and the rule is what took unmatched
+F1 from 0.00 to 1.00. Reporting "found an answer, could not place it" beside a
+blank Q5 is the honest failure, and the marks total is unaffected — Q5 is
+deliberately wrong and scores 0 either way.
+
+---
+
+## Making the 35/40 reproducible
+
+That number came from reading a run and comparing against
+`dataset/ground-truth.json` by eye, which no reviewer can repeat and no change
+can be tested against. `eval/score_dataset.py` makes it one command, and caches
+the raw run — including the answer blocks and the rung each match came down —
+so a bad run is diagnosable for free instead of costing another run. Diffing
+two cached runs is what found the `Q14.` fault above.
+
+```bash
+python eval/score_dataset.py            # run, then score
+python eval/score_dataset.py --rescore  # score the cache, no API calls
+```
+
+One caveat it surfaces: ground truth calls the last sheet page 4, and the PDF
+renders five pages. Q4 is genuinely on the fifth. The page column reports the
+disagreement rather than hiding it.
+
+---
+
 ## Things measured and rejected
 
 Recorded so they are not re-attempted.

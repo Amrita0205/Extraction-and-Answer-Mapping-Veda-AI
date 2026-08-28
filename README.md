@@ -243,12 +243,33 @@ and two blocks matching nothing.
 **Scored 35 / 40 against a ground truth of 35**, with 16 of 17 questions exactly
 right and every structural case handled.
 
+```bash
+python eval/score_dataset.py            # reproduce it
+python eval/score_dataset.py --rescore  # score the cached run, no API calls
+```
+
 It earned its keep on its first run by exposing two real defects: a digit
 misread on the sheet ("8" as "7") filed an answer under the wrong question *and*
 reported the right one blank — two questions lost to one character — and an
 internal choice resolved to the branch the student had not answered, because an
 answer that compares itself to the other branch borrows that branch's
 vocabulary. Both are fixed and pinned by tests.
+
+It later caught a third of the same family. A label transcribed as `Q14.`
+instead of `Q14. b.` took the first free sub-part, `14(a)`; the real `14(a)`
+then found its slot taken and was reported unmatched, and the next block shifted
+onto the vacancy. Four marks from one dropped character. `_resolve` now reads
+the sub-part out of the answer's own opening words — `Q14. b. 45 divided by
+2 ...` says which one it is — before falling back to writing order. See
+[docs/engineering-log.md](docs/engineering-log.md).
+
+Scans are cleaned before they are read: `api/pipeline/preprocess.py` flattens
+uneven lighting, deskews, and rescues faint ink, each step gated on measuring
+that the page needs it, so a digitally generated PDF passes through untouched.
+On the photographed sheets here it takes residual skew to 0.00° and the
+background range from 91–120 grey levels to 17–22, at no API cost —
+`python eval/preprocess_ab.py` shows the numbers. It did not move the mark
+total, and the log says so plainly.
 
 ### Breadth: all 14 subjects
 

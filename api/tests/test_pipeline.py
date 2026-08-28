@@ -15,9 +15,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
+from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
-from pipeline import gemini, grading, labels, mapping  # noqa: E402
+from pipeline import gemini, grading, labels, mapping, preprocess  # noqa: E402
 from pipeline.questions import _normalise  # noqa: E402
 from pipeline.schemas import AnswerBlock, Grade, Region  # noqa: E402
 from pipeline.tighten import tighten  # noqa: E402
@@ -514,6 +514,166 @@ def test_zero_padded_labels_match_the_printed_number():
     assert [q.status for q in questions] == ["answered"] * 3
     assert unmatched == [], "a padded label is the same question, not a stray answer"
     assert labels.norm_number("05") == labels.norm_number("5")
+
+
+# ADDED SO THAT A LABEL THAT LOST ITS SUB-PART IS RECOVERED FROM THE ANSWER'S OWN OPENING WORDS. STUDENTS WRITE "Q14." ON ONE LINE AND "b." ON THE NEXT, AND A TRANSCRIPTION THAT STOPS AT "Q14." USED TO FILE 14(b) AS 14(a), LEAVING THE REAL 14(a) UNMATCHED AND SHIFTING THE NEXT BLOCK ONTO THE VACANCY - FOUR MARKS OFF THE HAND-MARKED SHEET FOR ONE DROPPED CHARACTER.
+def test_a_label_that_lost_its_subpart_is_recovered_from_the_answer():
+    questions = [
+        _question("14", "a", "Define recursion.", marks=2),
+        _question("14", "b", "Convert 45 to binary.", marks=3),
+    ]
+    # Written order on the sheet: the binary conversion first, and its label
+    # came back without the "b." that is still sitting in its own first words.
+    blocks = [
+        _block("a14b", "Q14.", "Q14. b. 45 divided by 2 gives 22 remainder 1."),
+        _block("a14a", "Q14 a.", "Q14 a. Recursion is when a function calls itself."),
+    ]
+    questions, unmatched, _ = mapping.map_answers(questions, blocks)
+
+    assert questions[0].answer is not None, "14(a) was left unmatched"
+    assert questions[0].answer.id == "a14a"
+    assert questions[1].answer.id == "a14b"
+    assert unmatched == []
+
+
+# ADDED SO THAT THE RECOVERY ABOVE ONLY FIRES WHEN THE ANSWER REALLY NAMES ITS OWN SUB-PART. A BARE "Q11." STILL FALLS BACK TO WRITING ORDER, WHICH IS WHAT A STUDENT WHO NUMBERED ONLY THE STEM MEANT.
+def test_a_bare_number_still_falls_back_to_the_first_free_subpart():
+    questions = [
+        _question("11", "a", "Explain why Plant B is pale."),
+        _question("11", "b", "Suggest one practical measure."),
+    ]
+    blocks = [_block("a11", "Q11.", "Q11. Less light means less chlorophyll.")]
+    questions, unmatched, _ = mapping.map_answers(questions, blocks)
+
+    assert questions[0].answer is not None and questions[0].answer.id == "a11"
+    assert questions[1].answer is None
+
+
+# --------------------------------------------------------------------------
+# Page cleaning
+# --------------------------------------------------------------------------
+
+
+def _page(
+    width: int = 900,
+    height: int = 1200,
+    angle: float = 0.0,
+    gradient: int = 0,
+    ink: int = 20,
+    paper: int = 255,
+) -> Image.Image:
+    """A fake scan: ruled lines of text, optionally tilted and unevenly lit."""
+    img = Image.new("RGB", (width, height), (paper, paper, paper))
+    draw = ImageDraw.Draw(img)
+    # Bars rather than real glyphs. The projection-profile estimator keys off
+    # the gaps between lines, not off letter shapes, so bars exercise it
+    # honestly and keep the test free of font dependencies.
+    for row in range(8, height - 40, 44):
+        for x in range(60, width - 60, 90):
+            draw.rectangle([x, row, x + 62, row + 18], fill=(ink, ink, ink))
+
+    if angle:
+        img = img.rotate(angle, resample=Image.BICUBIC, fillcolor=(paper,) * 3)
+
+    if gradient:
+        # A shadow falling across the page from one corner.
+        arr = np.asarray(img, dtype=np.float32)
+        ramp = np.linspace(0, gradient, width, dtype=np.float32)[None, :]
+        ramp = ramp + np.linspace(0, gradient, height, dtype=np.float32)[:, None] / 2
+        arr = np.clip(arr - ramp[:, :, None], 0, 255)
+        img = Image.fromarray(arr.astype(np.uint8), "RGB")
+    return img
+
+
+def _background_range(img: Image.Image) -> float:
+    gray = np.asarray(img.convert("L"), dtype=np.float32)
+    bg = preprocess._background(gray)
+    return float(bg.max() - bg.min())
+
+
+# ADDED SO THAT A CLEAN, DIGITALLY GENERATED PAGE IS LEFT COMPLETELY ALONE - EVERY GATE IN THE MODULE HAS TO DECLINE ON INPUT THAT NEEDS NOTHING, OR PREPROCESSING BECOMES A WAY TO MAKE GOOD SCANS WORSE.
+def test_a_clean_page_is_passed_through_untouched():
+    clean = _page()
+    out, steps = preprocess.preprocess(clean)
+
+    assert steps == {}, f"nothing should have fired on a clean page, got {steps}"
+    assert np.array_equal(np.asarray(out), np.asarray(clean))
+
+
+# ADDED SO THAT UNEVEN LIGHTING IS ACTUALLY FLATTENED, WHICH IS WHAT STOPS BOTH THE MODEL AND tighten.py FROM READING A SHADOW AS INK.
+def test_uneven_lighting_is_flattened():
+    shadowed = _page(gradient=90)
+    before = _background_range(shadowed)
+    out, steps = preprocess.preprocess(shadowed)
+
+    assert "flatten_range" in steps
+    assert before > 60, f"the fixture should start badly lit, got {before:.0f}"
+    assert _background_range(out) < before / 3
+
+
+# ADDED SO THAT A TILTED PAGE COMES BACK SQUARE. A ROTATED SCAN SMEARS EVERY LINE OF WRITING ACROSS MANY PIXEL ROWS, WHICH IS WHERE MISREAD DIGITS COME FROM.
+def test_a_tilted_page_is_straightened():
+    tilted = _page(angle=-2.5)
+    assert abs(preprocess._skew_angle(preprocess._luma(tilted))) > 2.0
+
+    out, steps = preprocess.preprocess(tilted)
+
+    assert steps.get("deskew_deg") is not None
+    residual = abs(preprocess._skew_angle(preprocess._luma(out)))
+    assert residual < preprocess.SKEW_MIN, f"still {residual:.2f} degrees off square"
+
+
+# ADDED SO THAT DESKEW RUNS AFTER FLATTENING. ON THE REAL SHEETS THE PAPER LEVEL SWINGS ~100 GREY LEVELS ACROSS A PAGE, SO A SHADOW OUTWEIGHS THE INK AND THE ANGLE SEARCH LOCKS ONTO THE SHADING - MEASURED, IT PUSHED ONE PAGE FURTHER OFF SQUARE THAN IT STARTED.
+def test_a_tilted_page_is_straightened_through_a_heavy_shadow():
+    both = _page(angle=-2.0, gradient=110)
+    out, steps = preprocess.preprocess(both)
+
+    assert "flatten_range" in steps and "deskew_deg" in steps
+    residual = abs(preprocess._skew_angle(preprocess._luma(out)))
+    assert residual < preprocess.SKEW_MIN, f"still {residual:.2f} degrees off square"
+
+
+# ADDED SO THAT FAINT WRITING IS DARKENED WITHOUT BEING BINARISED - A THRESHOLD WOULD DESTROY PENCIL, THIN DIAGRAM STROKES AND HALF-ERASED ANSWERS, ALL OF WHICH THE MODEL CAN STILL READ AS GREYS.
+def test_faint_ink_is_darkened_but_not_thresholded():
+    # Blurred, because the greys worth protecting live on the soft edges of a
+    # real stroke. Hard-edged bars have no midtones to lose and would let a
+    # binarising implementation pass this test.
+    faint = _page(ink=150, paper=235).filter(ImageFilter.GaussianBlur(1.4))
+    out, steps = preprocess.preprocess(faint)
+
+    assert "stretch_from_ink" in steps
+    gray = np.asarray(out.convert("L"), dtype=np.float32)
+    assert float(np.percentile(gray, 0.5)) < 60, "ink should have come down"
+    # Anti-aliased stroke edges are the greys that must survive. A binarised
+    # page has none.
+    mid = ((gray > 70) & (gray < 200)).mean()
+    assert mid > 0.001, "every midtone was crushed - this has been binarised"
+
+
+# ADDED SO THAT VEDA_PREPROCESS=0 REALLY DISABLES EVERYTHING. THE ACCURACY HARNESS NEEDS BOTH ARMS OF AN A/B WITHOUT AN EDIT TO SOURCE, OR THE DECISION TO SHIP THIS ISN'T MEASURED.
+def test_the_kill_switch_disables_every_step():
+    import os
+
+    dirty = _page(angle=-2.5, gradient=110)
+    os.environ["VEDA_PREPROCESS"] = "0"
+    try:
+        out, steps = preprocess.preprocess(dirty)
+    finally:
+        os.environ.pop("VEDA_PREPROCESS")
+
+    assert steps == {}
+    assert out is dirty
+
+
+# ADDED SO THAT A PAGE THAT CANNOT BE CLEANED STILL GETS EXTRACTED. COSMETIC PREPROCESSING MUST NEVER BE ABLE TO TAKE DOWN A RUN.
+def test_degenerate_pages_are_handled_rather_than_raising():
+    for img in (
+        Image.new("RGB", (4, 4), (255, 255, 255)),      # smaller than the search
+        Image.new("RGB", (900, 1200), (255, 255, 255)),  # entirely blank
+        Image.new("RGB", (900, 1200), (0, 0, 0)),        # entirely black
+    ):
+        out, steps = preprocess.preprocess(img)
+        assert out.size == img.size or steps.get("deskew_deg")
 
 
 def _run() -> int:

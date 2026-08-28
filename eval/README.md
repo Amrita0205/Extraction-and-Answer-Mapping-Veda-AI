@@ -9,7 +9,24 @@ that move when a prompt or a threshold changes.
 python eval/run_eval.py                 # every case
 python eval/run_eval.py --case synthetic # one case
 python eval/run_eval.py --rescore       # re-score cached runs, no API calls
+
+python eval/score_dataset.py            # the hand-marked sheet vs its ground truth
+python eval/score_dataset.py --rescore  # score the cache, no API calls
+
+python eval/preprocess_ab.py            # what page cleaning does, no API calls
 ```
+
+`score_dataset.py` is the one to run after touching mapping or grading: it
+scores `dataset/` against `dataset/ground-truth.json`, which was written before
+the sheet was ever marked, and reports status, marks, highlight page and the
+total in one table. Its cache keeps the answer blocks and the rung each match
+came down, so diffing two runs shows *why* a number moved — that is how the
+dropped-sub-part fault in `_resolve` was found.
+
+`preprocess_ab.py` costs nothing and answers the question that has to come
+before an accuracy run: is the cleaning doing what it claims on these pages at
+all. `VEDA_PREPROCESS=0` and `VEDA_RENDER_DPI` switch the two arms of an A/B
+without editing source.
 
 Two directories, on purpose. `eval/out/` is scratch: rendered pages and the
 raw run cached per case, regenerable and large, so it is gitignored. Scoring

@@ -287,6 +287,30 @@ def _resolve(
         return None  # already answered; caller leaves the block unmatched
 
     if part is None:
+        # The written label can lose the sub-part while the answer itself keeps
+        # it. Students put the number on one line and "b." on the next, so a
+        # transcription that stops at "Q14." is one dropped character away from
+        # filing 14(b) as 14(a) - and then the real 14(a) arrives, finds its
+        # slot taken, and is reported unmatched. Two questions lost, plus the
+        # block that follows shifted onto the vacancy left behind: on the
+        # hand-marked sheet that one character cost four marks.
+        #
+        # Guessing is unnecessary, because the sub-part is still sitting in the
+        # opening words of the answer ("Q14. b. 45 divided by 2 ..."). Read it
+        # there first, and only fall back to writing order when the answer does
+        # not say either. The number has to agree before the part is trusted,
+        # so an answer that happens to open by quoting another question cannot
+        # redirect itself.
+        embedded_number, embedded_part = labels.parse_leading(text)
+        if embedded_part and embedded_number == number:
+            precise = [
+                q
+                for q in by_key.get(labels.key(number, embedded_part), [])
+                if q.id not in taken
+            ]
+            if precise:
+                return precise[0]
+
         # Student wrote "11" on a paper that prints 11(a) and 11(b): give it to
         # the first sub-part still free, which is what writing order implies.
         siblings = [
