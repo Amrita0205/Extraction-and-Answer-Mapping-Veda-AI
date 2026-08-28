@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Result, Row } from "@/lib/types";
+import { Chevron } from "./icons";
 import { AnswerSheet } from "./AnswerSheet";
 import { OrphanCard, QuestionCard } from "./QuestionCard";
 import { Underlined } from "./Underlined";
@@ -215,6 +216,8 @@ function SummaryStrip({
   warnings: string[];
   onReset: () => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="shrink-0 rounded-2xl bg-white/55 px-3.5 py-2.5 backdrop-blur-xl">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -237,21 +240,56 @@ function SummaryStrip({
         </button>
       </div>
 
-      {summary.overall_feedback && (
-        <p className="mt-2 border-t border-black/5 pt-2 text-[11.5px] leading-normal text-ink-soft">
-          <span className="font-semibold text-ink">Overall — </span>
-          {summary.overall_feedback}
-        </p>
-      )}
+      {/*
+        The counts stay; the prose folds away. The brief asks for a clear
+        grading summary, so the numbers are always on screen — but the overall
+        feedback plus a few warnings ran to nine or ten lines on a real sheet,
+        which pushed the questions and the answer sheet below the fold. The
+        design puts those two panels directly under the top bar, and they are
+        what the teacher came to look at.
+      */}
+      {(summary.overall_feedback || warnings.length > 0) && (
+        <div className="mt-1.5 border-t border-black/5 pt-1.5">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="flex items-center gap-1.5 rounded-full py-0.5 text-[11.5px] font-medium text-ink-soft transition hover:text-ink"
+          >
+            <Chevron
+              dir={open ? "up" : "down"}
+              width={13}
+              height={13}
+              className="text-ink-faint"
+            />
+            {open ? "Hide" : "Show"} feedback
+            {warnings.length > 0 && (
+              <span className="rounded-full bg-warn-bg px-1.5 py-0.5 text-[10.5px] font-semibold text-warn">
+                {warnings.length}
+              </span>
+            )}
+          </button>
 
-      {warnings.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5">
-          {warnings.map((warning) => (
-            <li key={warning} className="text-[11px] text-warn">
-              {warning}
-            </li>
-          ))}
-        </ul>
+          {open && (
+            <div className="animate-rise pt-1.5">
+              {summary.overall_feedback && (
+                <p className="text-[11.5px] leading-normal text-ink-soft">
+                  <span className="font-semibold text-ink">Overall — </span>
+                  {summary.overall_feedback}
+                </p>
+              )}
+              {warnings.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5">
+                  {warnings.map((warning) => (
+                    <li key={warning} className="text-[11px] text-warn">
+                      {warning}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
